@@ -3,14 +3,15 @@ import type { Metadata } from "next"
 import { Inter, JetBrains_Mono } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import { ThemeProvider } from "@/components/theme-provider"
+import { AuthProvider } from "@/contexts/auth-context"
 import "./globals.css"
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" })
 const jetbrainsMono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono" })
 
 export const metadata: Metadata = {
-  title: "CampaignHub - Marketing Campaign Management Platform",
-  description: "Plan, execute, and optimize your marketing campaigns with data-driven insights",
+  title: "School ERP - Education Management Platform",
+  description: "Comprehensive school management system for administrators, teachers, and students",
   generator: "v0.app",
   icons: {
     icon: [
@@ -39,8 +40,10 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable}`}>
       <body className="font-sans antialiased">
-        <ThemeProvider defaultTheme="light" storageKey="campaignhub-theme">
-          {children}
+        <ThemeProvider defaultTheme="light" storageKey="school-erp-theme">
+          <AuthProvider>
+            {children}
+          </AuthProvider>
         </ThemeProvider>
         <Analytics />
       </body>
