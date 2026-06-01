@@ -195,7 +195,16 @@ export const roleConfig: Record<UserRole, { label: string; color: string; bgColo
   },
 }
 
-// JWT configuration
-export const JWT_SECRET = "your-secret-key-change-in-production"
-export const JWT_EXPIRY = "24h"
-export const TOKEN_STORAGE_KEY = "school_erp_token"
+// Auth configuration
+export const AUTH_COOKIE_NAMES = {
+  ACCESS_TOKEN: "access_token",
+  REFRESH_TOKEN: "refresh_token",
+  USER_DATA: "user_data",
+} as const
+
+// Token expiry times (in seconds)
+export const TOKEN_EXPIRY = {
+  ACCESS_TOKEN: 15 * 60, // 15 minutes
+  REFRESH_TOKEN: 24 * 60 * 60, // 1 day
+  REFRESH_TOKEN_REMEMBER: 30 * 24 * 60 * 60, // 30 days
+} as const
