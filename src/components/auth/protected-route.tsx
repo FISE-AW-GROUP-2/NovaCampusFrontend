@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, usePathname } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
 import { UserRole } from "@/types/auth"
 import { Loader2 } from "lucide-react"
@@ -12,24 +12,32 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
-  const { user, isAuthenticated, isLoading } = useAuth()
+  const { user, isAuthenticated, isLoading, refreshToken } = useAuth()
   const router = useRouter()
+  const pathname = usePathname()
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      router.push("/login")
-    }
-  }, [isLoading, isAuthenticated, router])
+    const checkAccess = async () => {
+      if (isLoading) return
 
-  // Check role-based access
-  useEffect(() => {
-    if (!isLoading && isAuthenticated && user && allowedRoles) {
-      if (!allowedRoles.includes(user.role)) {
-        // Redirect to dashboard if user doesn't have required role
-        router.push("/")
+      if (!isAuthenticated) {
+        // Try to refresh token before redirecting
+        const refreshed = await refreshToken()
+        if (!refreshed) {
+          const loginUrl = `/login?callbackUrl=${encodeURIComponent(pathname)}`
+          router.push(loginUrl)
+        }
+        return
+      }
+
+      // Check role-based access
+      if (allowedRoles && user && !allowedRoles.includes(user.role)) {
+        router.push("/unauthorized")
       }
     }
-  }, [isLoading, isAuthenticated, user, allowedRoles, router])
+
+    checkAccess()
+  }, [isLoading, isAuthenticated, user, allowedRoles, router, pathname, refreshToken])
 
   if (isLoading) {
     return (
@@ -43,7 +51,14 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
   }
 
   if (!isAuthenticated) {
-    return null
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-sm text-muted-foreground">Checking authentication...</p>
+        </div>
+      </div>
+    )
   }
 
   // If roles are specified and user doesn't have required role, don't render

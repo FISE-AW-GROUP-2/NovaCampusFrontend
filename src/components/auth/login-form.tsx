@@ -1,48 +1,34 @@
 "use client"
 
 import { useState } from "react"
+import Link from "next/link"
 import { Eye, EyeOff, Loader2, Mail, Lock } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { useAuth } from "@/contexts/auth-context"
-import { getMockUsers } from "@/lib/auth"
-import { roleConfig } from "@/lib/constants"
-import { UserRole } from "@/types/auth"
 
 export function LoginForm() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [rememberMe, setRememberMe] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const { login } = useAuth()
-
-  const mockUsers = getMockUsers()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
     setIsSubmitting(true)
 
-    const result = await login({ email, password })
+    const result = await login({ email, password, rememberMe })
 
     if (!result.success) {
       setError(result.error || "Login failed")
     }
     setIsSubmitting(false)
-  }
-
-  const handleDemoLogin = (userEmail: string) => {
-    setEmail(userEmail)
-    // Set default password for demo users
-    const passwords: Record<string, string> = {
-      "admin@school.edu": "admin123",
-      "manager@school.edu": "manager123",
-      "teacher@school.edu": "teacher123",
-      "student@school.edu": "student123",
-    }
-    setPassword(passwords[userEmail] || "")
   }
 
   return (
@@ -65,7 +51,7 @@ export function LoginForm() {
               />
             </svg>
           </div>
-          <h1 className="text-2xl font-bold text-foreground">School ERP</h1>
+          <h1 className="text-2xl font-bold text-foreground">Nova Campus</h1>
           <p className="mt-1 text-muted-foreground">Sign in to your account</p>
         </div>
 
@@ -98,6 +84,7 @@ export function LoginForm() {
                     className="pl-10"
                     required
                     disabled={isSubmitting}
+                    autoComplete="email"
                   />
                 </div>
               </div>
@@ -117,6 +104,7 @@ export function LoginForm() {
                     className="pl-10 pr-10"
                     required
                     disabled={isSubmitting}
+                    autoComplete="current-password"
                   />
                   <button
                     type="button"
@@ -127,6 +115,29 @@ export function LoginForm() {
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="rememberMe"
+                    checked={rememberMe}
+                    onCheckedChange={(checked) => setRememberMe(checked === true)}
+                    disabled={isSubmitting}
+                  />
+                  <label
+                    htmlFor="rememberMe"
+                    className="text-sm font-medium leading-none text-foreground peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                  >
+                    Remember me
+                  </label>
+                </div>
+                <Link
+                  href="/forgot-password"
+                  className="text-sm font-medium text-primary hover:underline"
+                >
+                  Forgot password?
+                </Link>
               </div>
 
               <Button type="submit" className="w-full" disabled={isSubmitting}>
@@ -143,31 +154,13 @@ export function LoginForm() {
           </CardContent>
         </Card>
 
-        {/* Demo Users Card */}
-        <Card className="border-border/50">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Demo Accounts</CardTitle>
-            <CardDescription className="text-xs">
-              Click to auto-fill credentials for testing
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="grid grid-cols-2 gap-2">
-            {mockUsers.map((user) => {
-              const config = roleConfig[user.role as UserRole]
-              return (
-                <button
-                  key={user.email}
-                  type="button"
-                  onClick={() => handleDemoLogin(user.email)}
-                  className={`rounded-md px-3 py-2 text-left text-xs transition-colors hover:opacity-80 ${config.bgColor}`}
-                >
-                  <div className={`font-medium ${config.color}`}>{config.label}</div>
-                  <div className="text-muted-foreground truncate">{user.email}</div>
-                </button>
-              )
-            })}
-          </CardContent>
-        </Card>
+        {/* Help text */}
+        <p className="text-center text-sm text-muted-foreground">
+          Having trouble signing in?{" "}
+          <Link href="/help" className="font-medium text-primary hover:underline">
+            Contact support
+          </Link>
+        </p>
       </div>
     </div>
   )
