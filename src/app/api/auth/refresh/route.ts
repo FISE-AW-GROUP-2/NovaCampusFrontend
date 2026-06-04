@@ -32,14 +32,16 @@ export async function POST(request: NextRequest) {
     })
 
     if (!backendResponse.ok) {
-      // Clear cookies on refresh failure
       const errorResponse = NextResponse.json(
         { error: "Token refresh failed" },
-        { status: 401 }
+        { status: backendResponse.status }
       )
-      errorResponse.cookies.delete("access_token")
-      errorResponse.cookies.delete("refresh_token")
-      errorResponse.cookies.delete("user_data")
+      // Only clear cookies if the token is explicitly rejected (not on server errors)
+      if (backendResponse.status === 401 || backendResponse.status === 403) {
+        errorResponse.cookies.delete("access_token")
+        errorResponse.cookies.delete("refresh_token")
+        errorResponse.cookies.delete("user_data")
+      }
       return errorResponse
     }
 

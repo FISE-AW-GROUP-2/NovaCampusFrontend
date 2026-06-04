@@ -5,16 +5,18 @@ import { Button } from "@/components/ui/button"
 import { LogOut } from "lucide-react"
 import { Sidebar } from "@/components/dashboard/sidebar"
 import { Header } from "@/components/dashboard/header"
+import { useAuth } from "@/contexts/auth-context"
 
 export default function LogoutPage() {
   const router = useRouter()
+  const { logout } = useAuth()
 
   return (
     <div className="flex min-h-screen bg-background">
       <Sidebar />
 
       <main className="flex-1 p-4 lg:p-6 lg:ml-64">
-        <Header />
+        <Header title="Logout" description="Sign out of your account" />
 
         <div className="flex items-center justify-center min-h-[calc(100vh-100px)]">
           <Card className="p-8 max-w-md w-full text-center space-y-6 animate-fade-in">
@@ -31,7 +33,7 @@ export default function LogoutPage() {
               <Button variant="outline" className="flex-1 bg-transparent" onClick={() => router.back()}>
                 Cancel
               </Button>
-              <Button className="flex-1 bg-primary hover:bg-primary/90" onClick={() => router.push("/")}>
+              <Button className="flex-1 bg-primary hover:bg-primary/90" onClick={() => logout()}>
                 Logout
               </Button>
             </div>

@@ -17,7 +17,7 @@ const PUBLIC_ROUTES = [
 const AUTH_ROUTES = ["/login", "/forgot-password", "/reset-password"]
 
 // Role-based route permissions
-type UserRole = "CENTRAL_ADMIN" | "EDUCATION_MANAGER" | "TEACHER" | "STUDENT"
+type UserRole = "CENTRAL ADMIN" | "EDUCATION MANAGER" | "TEACHER" | "STUDENT"
 
 interface RoutePermission {
   pattern: RegExp
@@ -26,29 +26,29 @@ interface RoutePermission {
 
 const ROUTE_PERMISSIONS: RoutePermission[] = [
   // Admin routes - Central Admin only
-  { pattern: /^\/admin/, roles: ["CENTRAL_ADMIN"] },
+  { pattern: /^\/admin/, roles: ["CENTRAL ADMIN"] },
 
   // Academic management - Admin and Education Manager
-  { pattern: /^\/academic/, roles: ["CENTRAL_ADMIN", "EDUCATION_MANAGER"] },
+  { pattern: /^\/academic/, roles: ["CENTRAL ADMIN", "EDUCATION MANAGER"] },
 
   // Teaching routes - Teachers (and above)
-  { pattern: /^\/classes/, roles: ["CENTRAL_ADMIN", "EDUCATION_MANAGER", "TEACHER"] },
+  { pattern: /^\/classes/, roles: ["CENTRAL ADMIN", "EDUCATION MANAGER", "TEACHER"] },
 
   // Student portal - Students only
   { pattern: /^\/portal/, roles: ["STUDENT"] },
 
   // Settings - All authenticated users can access their own settings
-  { pattern: /^\/settings/, roles: ["CENTRAL_ADMIN", "EDUCATION_MANAGER", "TEACHER", "STUDENT"] },
+  { pattern: /^\/settings/, roles: ["CENTRAL ADMIN", "EDUCATION MANAGER", "TEACHER", "STUDENT"] },
 
   // Reports - Admin and Education Manager
-  { pattern: /^\/reports/, roles: ["CENTRAL_ADMIN", "EDUCATION_MANAGER"] },
+  { pattern: /^\/reports/, roles: ["CENTRAL ADMIN", "EDUCATION MANAGER"] },
 
   // Calendar - Everyone except students
-  { pattern: /^\/calendar/, roles: ["CENTRAL_ADMIN", "EDUCATION_MANAGER", "TEACHER"] },
+  { pattern: /^\/calendar/, roles: ["CENTRAL ADMIN", "EDUCATION MANAGER", "TEACHER"] },
 
   // Notifications and help - All users
-  { pattern: /^\/notifications/, roles: ["CENTRAL_ADMIN", "EDUCATION_MANAGER", "TEACHER", "STUDENT"] },
-  { pattern: /^\/help/, roles: ["CENTRAL_ADMIN", "EDUCATION_MANAGER", "TEACHER", "STUDENT"] },
+  { pattern: /^\/notifications/, roles: ["CENTRAL ADMIN", "EDUCATION MANAGER", "TEACHER", "STUDENT"] },
+  { pattern: /^\/help/, roles: ["CENTRAL ADMIN", "EDUCATION MANAGER", "TEACHER", "STUDENT"] },
 ]
 
 function isPublicRoute(pathname: string): boolean {

@@ -1,4 +1,5 @@
 import type React from "react"
+import { Suspense } from "react"
 import type { Metadata } from "next"
 import { Inter, JetBrains_Mono } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
@@ -38,12 +39,14 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable}`}>
+    <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable}`} suppressHydrationWarning>
       <body className="font-sans antialiased">
-        <ThemeProvider defaultTheme="light" storageKey="school-erp-theme">
-          <AuthProvider>
-            {children}
-          </AuthProvider>
+        <ThemeProvider defaultTheme="light" storageKey="school-erp-theme" enableSystem={false}>
+          <Suspense>
+            <AuthProvider>
+              {children}
+            </AuthProvider>
+          </Suspense>
         </ThemeProvider>
         <Analytics />
       </body>

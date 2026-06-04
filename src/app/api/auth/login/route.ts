@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
+import * as jose from "jose"
 
 const BACKEND_URL = process.env.BACKEND_API_URL || process.env.NEXT_PUBLIC_API_URL || ""
 
@@ -46,11 +47,19 @@ export async function POST(request: NextRequest) {
       ? 30 * 24 * 60 * 60 // 30 days
       : 24 * 60 * 60 // 1 day
 
-    // Create response with user data
-    const response = NextResponse.json({
-      user: data.user,
-      expiresAt: data.expiresAt,
+    // Fetch full user profile from backend using the new access token
+    const meResponse = await fetch(`${BACKEND_URL}/auth/me`, {
+      headers: {
+        Authorization: `Bearer ${data.accessToken}`,
+      },
     })
+    const rawUser = meResponse.ok ? await meResponse.json() : jose.decodeJwt(data.accessToken)
+
+    // Use the user object as-is from the backend
+    const user = rawUser
+
+    // Create response with user data
+    const response = NextResponse.json({ user })
 
     // Set HttpOnly cookies for tokens
     response.cookies.set("access_token", data.accessToken, {
@@ -64,7 +73,7 @@ export async function POST(request: NextRequest) {
     })
 
     // Store user data in a non-httpOnly cookie for client access
-    response.cookies.set("user_data", JSON.stringify(data.user), {
+    response.cookies.set("user_data", JSON.stringify(user), {
       ...COOKIE_OPTIONS,
       httpOnly: false,
       maxAge,

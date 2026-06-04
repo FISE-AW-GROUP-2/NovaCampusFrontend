@@ -1,7 +1,7 @@
 "use client"
 
 import { createContext, useContext, useEffect, useState, useCallback, useRef } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, usePathname, useSearchParams } from "next/navigation"
 import type { User, LoginCredentials, AuthContextType, Session } from "@/types/auth"
 import {
   loginApi,
@@ -26,7 +26,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [sessions, setSessions] = useState<Session[]>([])
   const [sessionsLoading, setSessionsLoading] = useState(false)
   const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
   const refreshTimerRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Auth routes where we skip the initial auth check
+  const AUTH_ROUTES = ["/login", "/forgot-password", "/reset-password"]
+  const isAuthPage = AUTH_ROUTES.some((r) => pathname?.startsWith(r))
 
   // Clear refresh timer
   const clearRefreshTimer = useCallback(() => {
@@ -84,19 +90,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [refreshToken, setupRefreshTimer])
 
   useEffect(() => {
+    if (isAuthPage) {
+      // Skip auth check on login/forgot-password/reset-password pages
+      setIsLoading(false)
+      return
+    }
     checkAuth()
 
     // Cleanup on unmount
     return () => {
       clearRefreshTimer()
     }
-  }, [checkAuth, clearRefreshTimer])
+  }, [checkAuth, clearRefreshTimer, isAuthPage])
 
-  // Handle visibility change - refresh token when tab becomes visible
+  // Handle visibility change - refresh token when tab becomes visible only if token is expiring
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible" && user) {
-        refreshToken()
+        // Only refresh if access token is about to expire (within 2 minutes)
+        const accessTokenCookie = document.cookie
+          .split("; ")
+          .find((c) => c.startsWith("access_token="))
+        if (!accessTokenCookie) {
+          refreshToken()
+        }
+        // If cookie exists, the middleware & httpOnly token are still valid — skip refresh
       }
     }
 
@@ -116,7 +134,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (result.success && result.data) {
         setUser(result.data)
         setupRefreshTimer()
-        router.push("/")
+        setIsLoading(false)
+        const callbackUrl = searchParams?.get("callbackUrl") || "/"
+        router.push(callbackUrl)
         return { success: true }
       }
       return { success: false, error: result.error }
