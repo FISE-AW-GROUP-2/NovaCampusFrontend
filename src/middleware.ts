@@ -34,6 +34,11 @@ const ROUTE_PERMISSIONS: RoutePermission[] = [
   // Teaching routes - Teachers (and above)
   { pattern: /^\/classes/, roles: ["CENTRAL ADMIN", "EDUCATION MANAGER", "TEACHER"] },
 
+  // Course Management routes
+  { pattern: /^\/courses\/teacher/, roles: ["CENTRAL ADMIN", "TEACHER"] },
+  { pattern: /^\/courses\/enrollments/, roles: ["CENTRAL ADMIN", "EDUCATION MANAGER"] },
+  { pattern: /^\/courses\/browse/, roles: ["CENTRAL ADMIN", "STUDENT"] },
+
   // Student portal - Students only
   { pattern: /^\/portal/, roles: ["STUDENT"] },
 
