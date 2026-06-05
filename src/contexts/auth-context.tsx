@@ -103,27 +103,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [checkAuth, clearRefreshTimer, isAuthPage])
 
-  // Handle visibility change - refresh token when tab becomes visible only if token is expiring
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === "visible" && user) {
-        // Only refresh if access token is about to expire (within 2 minutes)
-        const accessTokenCookie = document.cookie
-          .split("; ")
-          .find((c) => c.startsWith("access_token="))
-        if (!accessTokenCookie) {
-          refreshToken()
-        }
-        // If cookie exists, the middleware & httpOnly token are still valid — skip refresh
-      }
-    }
-
-    document.addEventListener("visibilitychange", handleVisibilityChange)
-    return () => {
-      document.removeEventListener("visibilitychange", handleVisibilityChange)
-    }
-  }, [user, refreshToken])
-
   // Login function
   const login = async (
     credentials: LoginCredentials
