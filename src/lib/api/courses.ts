@@ -102,14 +102,13 @@ export async function uploadCourseResourceApi(
   formData.append("courseId", courseId)
 
   try {
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}${COURSES_BASE}/resources`,
-      {
-        method: "POST",
-        body: formData,
-        credentials: "include",
-      }
-    )
+    // Hit the local Next.js proxy route (same origin) so the HttpOnly
+    // access_token cookie is sent and forwarded to the backend as a Bearer token.
+    const response = await fetch(`${COURSES_BASE}/resources`, {
+      method: "POST",
+      body: formData,
+      credentials: "include",
+    })
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}))
