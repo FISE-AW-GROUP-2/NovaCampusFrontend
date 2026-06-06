@@ -17,7 +17,7 @@ import type {
   ResourceType,
 } from "@/types/course"
 
-const COURSES_BASE = "/api/v1/courses"
+const COURSES_BASE = "/api/courses"
 
 // ==================== Course CRUD (Teacher) ====================
 
@@ -42,7 +42,9 @@ export async function getCoursesApi(params?: CourseQueryParams) {
 }
 
 export async function getCourseByIdApi(courseId: string) {
-  const response = await apiClient.get<CourseDetailResponse>(`${COURSES_BASE}/${courseId}`)
+  const response = await apiClient.get<CourseDetailResponse>(
+    `${COURSES_BASE}?id=${encodeURIComponent(courseId)}`
+  )
   return {
     success: !response.error,
     data: response.data,
@@ -60,7 +62,7 @@ export async function createCourseApi(data: CourseFormData) {
 }
 
 export async function updateCourseApi(courseId: string, data: Partial<CourseFormData>) {
-  const response = await apiClient.put<{ course: Course }>(`${COURSES_BASE}/${courseId}`, data)
+  const response = await apiClient.put<{ course: Course }>(COURSES_BASE, { id: courseId, ...data })
   return {
     success: !response.error,
     data: response.data?.course,
@@ -69,7 +71,7 @@ export async function updateCourseApi(courseId: string, data: Partial<CourseForm
 }
 
 export async function deleteCourseApi(courseId: string) {
-  const response = await apiClient.delete(`${COURSES_BASE}/${courseId}`)
+  const response = await apiClient.delete(`${COURSES_BASE}?id=${encodeURIComponent(courseId)}`)
   return {
     success: !response.error,
     error: response.error?.message,
@@ -80,7 +82,7 @@ export async function deleteCourseApi(courseId: string) {
 
 export async function getCourseResourcesApi(courseId: string) {
   const response = await apiClient.get<{ resources: CourseResource[] }>(
-    `${COURSES_BASE}/${courseId}/resources`
+    `${COURSES_BASE}/resources?courseId=${encodeURIComponent(courseId)}`
   )
   return {
     success: !response.error,
@@ -97,10 +99,11 @@ export async function uploadCourseResourceApi(
   const formData = new FormData()
   formData.append("file", file)
   formData.append("type", type)
+  formData.append("courseId", courseId)
 
   try {
     const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}${COURSES_BASE}/${courseId}/resources`,
+      `${process.env.NEXT_PUBLIC_API_URL}${COURSES_BASE}/resources`,
       {
         method: "POST",
         body: formData,
@@ -128,7 +131,7 @@ export async function uploadCourseResourceApi(
 
 export async function deleteCourseResourceApi(courseId: string, resourceId: string) {
   const response = await apiClient.delete(
-    `${COURSES_BASE}/${courseId}/resources/${resourceId}`
+    `${COURSES_BASE}/resources?courseId=${encodeURIComponent(courseId)}&resourceId=${encodeURIComponent(resourceId)}`
   )
   return {
     success: !response.error,
@@ -140,7 +143,7 @@ export async function deleteCourseResourceApi(courseId: string, resourceId: stri
 
 export async function getCourseEnrollmentsApi(courseId: string) {
   const response = await apiClient.get<EnrollmentsListResponse>(
-    `${COURSES_BASE}/${courseId}/enrollments`
+    `${COURSES_BASE}/enrollments?courseId=${encodeURIComponent(courseId)}`
   )
   return {
     success: !response.error,
@@ -151,8 +154,8 @@ export async function getCourseEnrollmentsApi(courseId: string) {
 
 export async function enrollStudentApi(courseId: string, data: EnrollmentFormData) {
   const response = await apiClient.post<{ enrollment: Enrollment }>(
-    `${COURSES_BASE}/${courseId}/enroll`,
-    data
+    `${COURSES_BASE}/enroll`,
+    { courseId, ...data }
   )
   return {
     success: !response.error,
@@ -163,7 +166,7 @@ export async function enrollStudentApi(courseId: string, data: EnrollmentFormDat
 
 export async function unenrollStudentApi(courseId: string, enrollmentId: string) {
   const response = await apiClient.delete(
-    `${COURSES_BASE}/${courseId}/enrollments/${enrollmentId}`
+    `${COURSES_BASE}/enrollments?courseId=${encodeURIComponent(courseId)}&enrollmentId=${encodeURIComponent(enrollmentId)}`
   )
   return {
     success: !response.error,
@@ -177,8 +180,8 @@ export async function updateEnrollmentStatusApi(
   status: string
 ) {
   const response = await apiClient.patch<{ enrollment: Enrollment }>(
-    `${COURSES_BASE}/${courseId}/enrollments/${enrollmentId}`,
-    { status }
+    `${COURSES_BASE}/enrollments`,
+    { courseId, enrollmentId, status }
   )
   return {
     success: !response.error,
@@ -193,7 +196,7 @@ export async function getStudentsApi(search?: string) {
   const searchParams = search ? `?search=${encodeURIComponent(search)}` : ""
   const response = await apiClient.get<{
     students: Array<{ id: string; name: string; email: string }>
-  }>(`/api/v1/users/students${searchParams}`)
+  }>(`/api/users/students${searchParams}`)
   return {
     success: !response.error,
     data: response.data?.students,
