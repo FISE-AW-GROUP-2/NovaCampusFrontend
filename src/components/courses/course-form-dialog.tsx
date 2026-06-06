@@ -22,14 +22,15 @@ import {
 } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { Spinner } from "@/components/ui/spinner"
+import { useToast } from "@/hooks/use-toast"
+import { createCourseApi, updateCourseApi } from "@/lib/api/courses"
 import type { Course, CourseFormData } from "@/types/course"
 
 interface CourseFormDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   course?: Course | null
-  onSubmit: (data: CourseFormData) => Promise<void>
-  isLoading?: boolean
+  onSuccess?: (course: Course) => void
 }
 
 const SEMESTERS = ["Fall", "Spring", "Summer"]
@@ -39,23 +40,26 @@ const ACADEMIC_YEARS = Array.from({ length: 5 }, (_, i) => {
   return `${year}-${year + 1}`
 })
 
+const DEFAULT_FORM: CourseFormData = {
+  code: "",
+  name: "",
+  description: "",
+  credits: 3,
+  semester: "Fall",
+  academicYear: `${CURRENT_YEAR}-${CURRENT_YEAR + 1}`,
+  maxStudents: 30,
+  isActive: true,
+}
+
 export function CourseFormDialog({
   open,
   onOpenChange,
   course,
-  onSubmit,
-  isLoading,
+  onSuccess,
 }: CourseFormDialogProps) {
-  const [formData, setFormData] = useState<CourseFormData>({
-    code: "",
-    name: "",
-    description: "",
-    credits: 3,
-    semester: "Fall",
-    academicYear: `${CURRENT_YEAR}-${CURRENT_YEAR + 1}`,
-    maxStudents: 30,
-    isActive: true,
-  })
+  const [formData, setFormData] = useState<CourseFormData>(DEFAULT_FORM)
+  const [isLoading, setIsLoading] = useState(false)
+  const { toast } = useToast()
 
   const isEditing = !!course
 
@@ -72,22 +76,41 @@ export function CourseFormDialog({
         isActive: course.isActive,
       })
     } else {
-      setFormData({
-        code: "",
-        name: "",
-        description: "",
-        credits: 3,
-        semester: "Fall",
-        academicYear: `${CURRENT_YEAR}-${CURRENT_YEAR + 1}`,
-        maxStudents: 30,
-        isActive: true,
-      })
+      setFormData(DEFAULT_FORM)
     }
   }, [course, open])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    await onSubmit(formData)
+    setIsLoading(true)
+    try {
+      const result = isEditing
+        ? await updateCourseApi(course._id, formData)
+        : await createCourseApi(formData)
+
+      if (result.success && result.data) {
+        toast({
+          title: isEditing ? "Course updated" : "Course created",
+          description: `${formData.name} has been ${isEditing ? "updated" : "created"} successfully.`,
+        })
+        onSuccess?.(result.data)
+        onOpenChange(false)
+      } else {
+        toast({
+          title: "Error",
+          description: result.error || `Failed to ${isEditing ? "update" : "create"} course`,
+          variant: "destructive",
+        })
+      }
+    } catch {
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (

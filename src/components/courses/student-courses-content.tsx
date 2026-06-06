@@ -96,7 +96,7 @@ export function StudentCoursesContent() {
     } finally {
       setIsLoading(false)
     }
-  }, [search, semester, academicYear, toast])
+  }, [search, semester, academicYear])
 
   useEffect(() => {
     const debounce = setTimeout(fetchCourses, 300)

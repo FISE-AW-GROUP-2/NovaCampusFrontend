@@ -18,12 +18,10 @@ import { ResourcesSheet } from "./resources-sheet"
 import { useToast } from "@/hooks/use-toast"
 import {
   getCoursesApi,
-  createCourseApi,
-  updateCourseApi,
   deleteCourseApi,
   uploadCourseResourceApi,
 } from "@/lib/api/courses"
-import type { Course, CourseFormData, ResourceType } from "@/types/course"
+import type { Course, ResourceType } from "@/types/course"
 import { Plus, Search, BookOpen } from "lucide-react"
 
 const CURRENT_YEAR = new Date().getFullYear()
@@ -43,7 +41,6 @@ export function TeacherCoursesContent() {
   // Dialog states
   const [showCourseForm, setShowCourseForm] = useState(false)
   const [editingCourse, setEditingCourse] = useState<Course | null>(null)
-  const [isSubmitting, setIsSubmitting] = useState(false)
 
   // Resource states
   const [showResourcesSheet, setShowResourcesSheet] = useState(false)
@@ -73,61 +70,21 @@ export function TeacherCoursesContent() {
     } finally {
       setIsLoading(false)
     }
-  }, [search, semester, academicYear, toast])
+  }, [search, semester, academicYear])
 
   useEffect(() => {
     const debounce = setTimeout(fetchCourses, 300)
     return () => clearTimeout(debounce)
   }, [fetchCourses])
 
-  const handleCreateCourse = async (data: CourseFormData) => {
-    setIsSubmitting(true)
-    try {
-      const result = await createCourseApi(data)
-      if (result.success && result.data) {
-        setCourses((prev) => [result.data!, ...prev])
-        setShowCourseForm(false)
-        toast({
-          title: "Course created",
-          description: `${data.name} has been created successfully.`,
-        })
-      } else {
-        toast({
-          title: "Error",
-          description: result.error || "Failed to create course",
-          variant: "destructive",
-        })
-      }
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
-
-  const handleUpdateCourse = async (data: CourseFormData) => {
-    if (!editingCourse) return
-    setIsSubmitting(true)
-    try {
-      const result = await updateCourseApi(editingCourse._id, data)
-      if (result.success && result.data) {
-        setCourses((prev) =>
-          prev.map((c) => (c._id === editingCourse._id ? result.data! : c))
-        )
-        setEditingCourse(null)
-        setShowCourseForm(false)
-        toast({
-          title: "Course updated",
-          description: `${data.name} has been updated successfully.`,
-        })
-      } else {
-        toast({
-          title: "Error",
-          description: result.error || "Failed to update course",
-          variant: "destructive",
-        })
-      }
-    } finally {
-      setIsSubmitting(false)
-    }
+  const handleCourseSuccess = (course: Course) => {
+    setCourses((prev) => {
+      const exists = prev.find((c) => c._id === course._id)
+      return exists
+        ? prev.map((c) => (c._id === course._id ? course : c))
+        : [course, ...prev]
+    })
+    setEditingCourse(null)
   }
 
   const handleDeleteCourse = async (courseId: string) => {
@@ -273,8 +230,7 @@ export function TeacherCoursesContent() {
         open={showCourseForm}
         onOpenChange={handleFormClose}
         course={editingCourse}
-        onSubmit={editingCourse ? handleUpdateCourse : handleCreateCourse}
-        isLoading={isSubmitting}
+        onSuccess={handleCourseSuccess}
       />
 
       {/* Resources Sheet */}

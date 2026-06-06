@@ -1,8 +1,8 @@
 export enum UserRole {
-  CENTRAL_ADMIN = "CENTRAL ADMIN",
-  EDUCATION_MANAGER = "EDUCATION MANAGER",
-  TEACHER = "TEACHER",
-  STUDENT = "STUDENT",
+  CENTRAL_ADMIN = "Central Admin",
+  EDUCATION_MANAGER = "Education Manager",
+  TEACHER = "Teacher",
+  STUDENT = "Student",
 }
 
 export interface User {
