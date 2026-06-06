@@ -55,6 +55,7 @@ export async function GET(request: NextRequest) {
         name: decoded.name,
         role: decoded.role,
         avatar: decoded.avatar,
+        campusId: decoded.campusId,
       }
       return NextResponse.json({ user })
     } catch {

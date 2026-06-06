@@ -21,6 +21,7 @@ export interface CourseFormData {
   name: string
   description: string
   credits: number
+  campusId?: string
   semester: string
   academicYear: string
   maxStudents: number

@@ -24,6 +24,7 @@ import { Switch } from "@/components/ui/switch"
 import { Spinner } from "@/components/ui/spinner"
 import { useToast } from "@/hooks/use-toast"
 import { createCourseApi, updateCourseApi } from "@/lib/api/courses"
+import { useAuth } from "@/contexts/auth-context"
 import type { Course, CourseFormData } from "@/types/course"
 
 interface CourseFormDialogProps {
@@ -60,6 +61,7 @@ export function CourseFormDialog({
   const [formData, setFormData] = useState<CourseFormData>(DEFAULT_FORM)
   const [isLoading, setIsLoading] = useState(false)
   const { toast } = useToast()
+  const { user } = useAuth()
 
   const isEditing = !!course
 
@@ -84,9 +86,11 @@ export function CourseFormDialog({
     e.preventDefault()
     setIsLoading(true)
     try {
+      // campusId is taken from the authenticated user (derived from the JWT),
+      // not entered manually. The backend also derives teacherId from the token.
       const result = isEditing
         ? await updateCourseApi(course._id, formData)
-        : await createCourseApi(formData)
+        : await createCourseApi({ ...formData, campusId: user?.campusId })
 
       if (result.success && result.data) {
         toast({

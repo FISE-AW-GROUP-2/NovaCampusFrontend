@@ -11,6 +11,7 @@ export interface User {
   name: string
   role: UserRole
   avatar?: string
+  campusId?: string
 }
 
 export interface LoginCredentials {
@@ -30,6 +31,7 @@ export interface JWTPayload {
   email: string
   name: string
   role: UserRole
+  campusId?: string
   iat: number
   exp: number
 }
