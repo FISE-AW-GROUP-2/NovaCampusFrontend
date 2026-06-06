@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 
-const BACKEND_URL = process.env.BACKEND_API_URL || process.env.NEXT_PUBLIC_API_URL || ""
+const BACKEND_URL = process.env.BACKEND_COURSES_API_URL || process.env.NEXT_PUBLIC_API_URL || ""
 
 /**
  * Proxies a JSON request from the browser to the backend course service.
