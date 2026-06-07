@@ -27,7 +27,7 @@ export async function PUT(request: NextRequest) {
       if (text) {
         try {
           const body = JSON.parse(text)
-          courseId = body.courseId || body.id || body._id
+          courseId = body.id 
         } catch (e) {
           // ignore JSON parse errors
         }
@@ -47,7 +47,7 @@ export async function PUT(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   // Accept courseId or id query parameter for deletion
-  const courseId = request.nextUrl.searchParams.get("courseId") || request.nextUrl.searchParams.get("id")
+  const courseId = request.nextUrl.searchParams.get("id")
   if (courseId) {
     return proxyToBackend(request, `/courses/${encodeURIComponent(courseId)}`)
   }
