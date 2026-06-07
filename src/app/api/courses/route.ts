@@ -17,16 +17,40 @@ export async function POST(request: NextRequest) {
 }
 
 export async function PUT(request: NextRequest) {
-  // Extract courseId from query parameter
-  const courseId = request.nextUrl.searchParams.get("courseId")
+  // Accept courseId from query parameter or JSON body (for non-dynamic route usage)
+  let courseId = request.nextUrl.searchParams.get("courseId")
+
   if (!courseId) {
-    return NextResponse.json({ error: "courseId query parameter is required" }, { status: 400 })
+    try {
+      const cloned = request.clone()
+      const text = await cloned.text()
+      if (text) {
+        try {
+          const body = JSON.parse(text)
+          courseId = body.courseId || body.id || body._id
+        } catch (e) {
+          // ignore JSON parse errors
+        }
+      }
+    } catch (e) {
+      // ignore read errors
+    }
   }
 
-  // Forward to backend with courseId in the path
+  if (!courseId) {
+    return NextResponse.json({ error: "courseId query parameter or body id is required" }, { status: 400 })
+  }
+
+  // Forward to backend with courseId in the path. Original request body is forwarded by proxyToBackend.
   return proxyToBackend(request, `/courses/${encodeURIComponent(courseId)}`)
 }
 
 export async function DELETE(request: NextRequest) {
+  // Accept courseId or id query parameter for deletion
+  const courseId = request.nextUrl.searchParams.get("courseId") || request.nextUrl.searchParams.get("id")
+  if (courseId) {
+    return proxyToBackend(request, `/courses/${encodeURIComponent(courseId)}`)
+  }
+
   return proxyToBackend(request, "/courses")
 }
