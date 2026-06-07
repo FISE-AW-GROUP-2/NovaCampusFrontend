@@ -18,6 +18,8 @@ import {
   BookOpen,
   GraduationCap,
   UserPlus,
+  DoorOpen,
+  CalendarPlus,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useState, createContext, useContext } from "react"
@@ -66,6 +68,21 @@ const getCourseItems = (role?: UserRole) => {
   return items
 }
 
+// Room items based on user role
+const getRoomItems = (role?: UserRole) => {
+  const items: Array<{ icon: typeof BookOpen; label: string; href: string; badge?: string }> = []
+
+  if (role === UserRole.TEACHER || role === UserRole.CENTRAL_ADMIN) {
+    items.push({ icon: CalendarPlus, label: "Book a Room", href: "/rooms/book" })
+  }
+
+  if (role === UserRole.EDUCATION_MANAGER || role === UserRole.CENTRAL_ADMIN) {
+    items.push({ icon: DoorOpen, label: "Manage Rooms", href: "/rooms/manage" })
+  }
+
+  return items
+}
+
 const aiItems = [
   { icon: Bot, label: "AI Assistant", badge: "New", href: "/ai-assistant" },
   { icon: Sparkles, label: "Content Generator", href: "/content-generator" },
@@ -83,6 +100,7 @@ export function Sidebar({ isCollapsed = false, onToggle }: { isCollapsed?: boole
   const pathname = usePathname()
   const { user } = useAuth()
   const courseItems = getCourseItems(user?.role)
+  const roomItems = getRoomItems(user?.role)
 
   return (
     <aside
@@ -164,6 +182,47 @@ export function Sidebar({ isCollapsed = false, onToggle }: { isCollapsed?: boole
               )}
               <nav className="space-y-0.5">
                 {courseItems.map((item) => {
+                  const isActive = pathname === item.href || pathname?.startsWith(item.href + "/")
+                  return (
+                    <Link
+                      key={item.label}
+                      href={item.href}
+                      title={isCollapsed ? item.label : undefined}
+                      className={cn(
+                        "w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm font-normal transition-colors",
+                        isActive
+                          ? "bg-primary/10 text-primary font-medium"
+                          : "text-muted-foreground hover:bg-sidebar-accent hover:text-foreground",
+                        isCollapsed && "justify-center",
+                      )}
+                    >
+                      <item.icon className={cn("w-4 h-4", isCollapsed && "w-4.5 h-4.5")} />
+                      {!isCollapsed && (
+                        <>
+                          <span className="text-sm">{item.label}</span>
+                          {item.badge && (
+                            <span className="ml-auto bg-muted text-foreground text-[10px] font-medium px-1.5 py-0.5 rounded">
+                              {item.badge}
+                            </span>
+                          )}
+                        </>
+                      )}
+                    </Link>
+                  )
+                })}
+              </nav>
+            </div>
+          )}
+
+          {roomItems.length > 0 && (
+            <div>
+              {!isCollapsed && (
+                <p className="text-[10px] font-semibold text-muted-foreground mb-2 uppercase tracking-wide px-2">
+                  ROOMS
+                </p>
+              )}
+              <nav className="space-y-0.5">
+                {roomItems.map((item) => {
                   const isActive = pathname === item.href || pathname?.startsWith(item.href + "/")
                   return (
                     <Link
