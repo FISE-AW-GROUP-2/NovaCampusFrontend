@@ -82,8 +82,14 @@ export function EnrollStudentDialog({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!selectedStudent) return
-    await onEnroll(selectedStudent.id)
-    setSelectedStudent(null)
+    try {
+      // Pass the selected student ID to the onEnroll callback
+      // The callback will construct { studentId } for the API call
+      await onEnroll(selectedStudent.id)
+      setSelectedStudent(null)
+    } catch (error) {
+      console.error("Enrollment error:", error)
+    }
   }
 
   const getInitials = (name: string) => {

@@ -45,6 +45,9 @@ export interface Enrollment {
     name: string
     email: string
   }
+  // Backend sometimes returns flattened student fields on enrollment
+  studentName?: string
+  studentEmail?: string
 }
 
 export interface EnrollmentFormData {

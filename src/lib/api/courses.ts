@@ -153,8 +153,8 @@ export async function getCourseEnrollmentsApi(courseId: string) {
 
 export async function enrollStudentApi(courseId: string, data: EnrollmentFormData) {
   const response = await apiClient.post<{ enrollment: Enrollment }>(
-    `${COURSES_BASE}/enroll`,
-    { courseId, ...data }
+    `${COURSES_BASE}/enroll?courseId=${encodeURIComponent(courseId)}`,
+    data
   )
   return {
     success: !response.error,

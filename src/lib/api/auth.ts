@@ -141,9 +141,19 @@ export async function getStudentsApi(usersession?: string, search?: string): Pro
     }
 
     const data = await response.json()
+    // Backend returns array of user objects with _id, profile.firstName/lastName, email
+    // Map to Student interface: { id, name, email }
+    const students = Array.isArray(data)
+      ? data.map((user: any) => ({
+          id: user._id,
+          name: user.profile ? `${user.profile.firstName} ${user.profile.lastName}`.trim() : 'Unknown',
+          email: user.email,
+        }))
+      : (data.students || [])
+
     return {
       success: true,
-      data: data.students,
+      data: students,
     }
   } catch {
     return {
