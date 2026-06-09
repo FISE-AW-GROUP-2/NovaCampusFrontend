@@ -191,14 +191,3 @@ export async function updateEnrollmentStatusApi(
 
 // ==================== Students API (for Education Manager) ====================
 
-export async function getStudentsApi(search?: string) {
-  const searchParams = search ? `?search=${encodeURIComponent(search)}` : ""
-  const response = await apiClient.get<{
-    students: Array<{ id: string; name: string; email: string }>
-  }>(`/api/users/students${searchParams}`)
-  return {
-    success: !response.error,
-    data: response.data?.students,
-    error: response.error?.message,
-  }
-}

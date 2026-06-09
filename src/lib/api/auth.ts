@@ -118,6 +118,44 @@ export async function refreshTokenApi(): Promise<AuthApiResponse> {
 }
 
 /**
+ * Get students (moved from courses API) - hits the auth namespace endpoint
+ */
+export async function getStudentsApi(usersession?: string, search?: string): Promise<AuthApiResponse<Array<{ id: string; name: string; email: string }>>> {
+  try {
+    const searchParams = search ? `?search=${encodeURIComponent(search)}` : ''
+    // Default to role 'Student' when usersession is not provided so callers
+    // without a session still get student users.
+    const effectiveSession = usersession ?? 'Student'
+    const path = `/api/users/${encodeURIComponent(effectiveSession)}${searchParams}`
+    const response = await fetch(path, {
+      method: 'GET',
+      credentials: 'include',
+    })
+
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}))
+      return {
+        success: false,
+        error: data.error || 'Failed to fetch students',
+      }
+    }
+
+    const data = await response.json()
+    return {
+      success: true,
+      data: data.students,
+    }
+  } catch {
+    return {
+      success: false,
+      error: 'Network error. Please try again.',
+    }
+  }
+}
+
+
+
+/**
  * Request password reset email
  */
 export async function forgotPasswordApi(

@@ -1,33 +1,32 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 
-// Prefer generic BACKEND_API_URL; fall back to course-specific or public URL for compatibility
-const BACKEND_URL = process.env.BACKEND_API_URL || process.env.NEXT_PUBLIC_API_URL 
+// Dedicated backend URL for courses service
+const BACKEND_URL =  process.env.BACKEND_COURSES_API_URL
 
 // Log which backend URL we're using (helpful for local debugging). Only log in non-production.
 if (process.env.NODE_ENV !== "production") {
   try {
-    // Use console.debug so this is easy to filter in logs
-    console.debug("[proxy] USING_BACKEND_URL:", BACKEND_URL || "(none - set BACKEND_API_URL or BACKEND_COURSES_API_URL)")
+    console.debug("[courses-proxy] USING_BACKEND_URL:", BACKEND_URL)
   } catch (e) {
     // ignore logging errors
   }
 }
 
 /**
- * Proxies a JSON request from the browser to the backend course service.
+ * Proxies a JSON request from the browser to the backend courses service.
  * Reads the HttpOnly access_token cookie and forwards it as a Bearer token.
  *
  * The browser cannot send the HttpOnly JWT directly to the backend, so all
  * course-service calls are routed through these Next.js route handlers.
  */
-export async function proxyToBackend(
+export async function proxyCoursesToBackend(
   request: NextRequest,
   backendPath: string
 ): Promise<NextResponse> {
   if (!BACKEND_URL) {
     return NextResponse.json(
-      { message: "Backend API URL is not configured" },
+      { message: "Courses backend API URL is not configured" },
       { status: 500 }
     )
   }
@@ -68,7 +67,7 @@ export async function proxyToBackend(
   } catch (error) {
     return NextResponse.json(
       {
-        message: error instanceof Error ? error.message : "Failed to reach backend",
+        message: error instanceof Error ? error.message : "Failed to reach courses backend",
       },
       { status: 502 }
     )
@@ -76,16 +75,16 @@ export async function proxyToBackend(
 }
 
 /**
- * Proxies a multipart/form-data request (file upload) to the backend.
+ * Proxies a multipart/form-data request (file upload) to the backend courses service.
  * Does NOT set Content-Type so the boundary is preserved by fetch.
  */
-export async function proxyFormToBackend(
+export async function proxyFormToCoursesBackend(
   request: NextRequest,
   backendPath: string
 ): Promise<NextResponse> {
   if (!BACKEND_URL) {
     return NextResponse.json(
-      { message: "Backend API URL is not configured" },
+      { message: "Courses backend API URL is not configured" },
       { status: 500 }
     )
   }
@@ -117,7 +116,7 @@ export async function proxyFormToBackend(
   } catch (error) {
     return NextResponse.json(
       {
-        message: error instanceof Error ? error.message : "Failed to reach backend",
+        message: error instanceof Error ? error.message : "Failed to reach courses backend",
       },
       { status: 502 }
     )
