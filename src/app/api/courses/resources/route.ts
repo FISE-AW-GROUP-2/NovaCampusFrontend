@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
-import { proxyToBackend, proxyFormToBackend } from "@/lib/api/proxy"
+import { proxyCoursesToBackend, proxyFormToCoursesBackend } from "@/lib/api/courses-proxy"
 
 // BACKEND_API_URL already includes "/api", so do not repeat it here.
 // GET    /api/courses/resources -> backend GET    {BACKEND_API_URL}/courses/resources
@@ -13,16 +13,16 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "courseId query parameter is required" }, { status: 400 })
   }
 
-  // If courseId is present in the incoming URL, proxyToBackend will preserve it.
+  // If courseId is present in the incoming URL, proxyCoursesToBackend will preserve it.
   // However, include it explicitly when forwarding to ensure backend receives it.
-  return proxyToBackend(request, `/courses/resources?courseId=${encodeURIComponent(courseId)}`)
+  return proxyCoursesToBackend(request, `/courses/resources?courseId=${encodeURIComponent(courseId)}`)
 }
 
 export async function POST(request: NextRequest) {
   // Prefer courseId from query string
   const urlCourseId = request.nextUrl.searchParams.get("courseId")
   if (urlCourseId) {
-    return proxyFormToBackend(request, "/courses/resources")
+    return proxyFormToCoursesBackend(request, "/courses/resources")
   }
 
   // If not present in query, try to read it from multipart form data (e.g. when uploading files)
@@ -36,12 +36,12 @@ export async function POST(request: NextRequest) {
 
     const courseId = String(fdCourseId)
     // Forward original request but include courseId in backend path so backend receives it as a query param
-    return proxyFormToBackend(request, `/courses/resources?courseId=${encodeURIComponent(courseId)}`)
+    return proxyFormToCoursesBackend(request, `/courses/resources?courseId=${encodeURIComponent(courseId)}`)
   } catch (err) {
     return NextResponse.json({ error: "Failed to read form data" }, { status: 400 })
   }
 }
 
 export async function DELETE(request: NextRequest) {
-  return proxyToBackend(request, "/courses/resources")
+  return proxyCoursesToBackend(request, "/courses/resources")
 }

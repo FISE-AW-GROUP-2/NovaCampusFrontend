@@ -369,15 +369,17 @@ export function EducationManagerCoursesContent() {
                           <div className="flex items-center gap-3">
                             <Avatar className="h-8 w-8">
                               <AvatarFallback className="text-xs">
-                                {getInitials(enrollment.student?.name || "?")}
+                                {getInitials(
+                                  enrollment.studentName || enrollment.student?.name || "?"
+                                )}
                               </AvatarFallback>
                             </Avatar>
                             <div>
                               <p className="font-medium text-sm">
-                                {enrollment.student?.name || "Unknown"}
+                                {enrollment.studentName || enrollment.student?.name || "Unknown"}
                               </p>
                               <p className="text-xs text-muted-foreground">
-                                {enrollment.student?.email || ""}
+                                {enrollment.studentEmail || enrollment.student?.email || ""}
                               </p>
                             </div>
                           </div>
@@ -452,8 +454,8 @@ export function EducationManagerCoursesContent() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Remove Student</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to remove {removeEnrollment?.student?.name} from this
+              <AlertDialogDescription>
+              Are you sure you want to remove {removeEnrollment?.studentName || removeEnrollment?.student?.name} from this
               course? This action can be undone by re-enrolling the student.
             </AlertDialogDescription>
           </AlertDialogHeader>

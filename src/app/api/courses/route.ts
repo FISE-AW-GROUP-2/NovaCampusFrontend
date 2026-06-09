@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
-import { proxyToBackend } from "@/lib/api/proxy"
+import { proxyCoursesToBackend } from "@/lib/api/courses-proxy"
 
 // BACKEND_API_URL already includes the "/api" segment, so the backend path here
 // must NOT repeat it (otherwise the URL becomes /api/api/courses).
@@ -9,11 +9,11 @@ import { proxyToBackend } from "@/lib/api/proxy"
 // PUT    /api/courses/{courseId} -> backend PUT    {BACKEND_API_URL}/courses/{courseId}
 // DELETE /api/courses -> backend DELETE {BACKEND_API_URL}/courses
 export async function GET(request: NextRequest) {
-  return proxyToBackend(request, "/courses")
+  return proxyCoursesToBackend(request, "/courses")
 }
 
 export async function POST(request: NextRequest) {
-  return proxyToBackend(request, "/courses")
+  return proxyCoursesToBackend(request, "/courses")
 }
 
 export async function PUT(request: NextRequest) {
@@ -41,16 +41,16 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ error: "courseId query parameter or body id is required" }, { status: 400 })
   }
 
-  // Forward to backend with courseId in the path. Original request body is forwarded by proxyToBackend.
-  return proxyToBackend(request, `/courses/${encodeURIComponent(courseId)}`)
+  // Forward to backend with courseId in the path. Original request body is forwarded by proxyCoursesToBackend.
+  return proxyCoursesToBackend(request, `/courses/${encodeURIComponent(courseId)}`)
 }
 
 export async function DELETE(request: NextRequest) {
   // Accept courseId or id query parameter for deletion
   const courseId = request.nextUrl.searchParams.get("id")
   if (courseId) {
-    return proxyToBackend(request, `/courses/${encodeURIComponent(courseId)}`)
+    return proxyCoursesToBackend(request, `/courses/${encodeURIComponent(courseId)}`)
   }
 
-  return proxyToBackend(request, "/courses")
+  return proxyCoursesToBackend(request, "/courses")
 }

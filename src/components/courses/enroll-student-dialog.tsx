@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/label"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Spinner } from "@/components/ui/spinner"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { getStudentsApi } from "@/lib/api/courses"
+import { getStudentsApi } from "@/lib/api/auth"
 import { Search, User, Check } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -32,6 +32,7 @@ interface EnrollStudentDialogProps {
   onEnroll: (studentId: string) => Promise<void>
   isLoading?: boolean
   enrolledStudentIds: string[]
+  usersession?: string
 }
 
 export function EnrollStudentDialog({
@@ -41,6 +42,7 @@ export function EnrollStudentDialog({
   onEnroll,
   isLoading,
   enrolledStudentIds,
+  usersession,
 }: EnrollStudentDialogProps) {
   const [students, setStudents] = useState<Student[]>([])
   const [search, setSearch] = useState("")
@@ -68,9 +70,9 @@ export function EnrollStudentDialog({
   const fetchStudents = async (searchTerm?: string) => {
     setIsSearching(true)
     try {
-      const result = await getStudentsApi(searchTerm)
-      if (result.success && result.data) {
-        setStudents(result.data)
+      const res = await getStudentsApi(usersession, searchTerm)
+      if (res.success && res.data) {
+        setStudents(res.data)
       }
     } finally {
       setIsSearching(false)
@@ -80,8 +82,14 @@ export function EnrollStudentDialog({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!selectedStudent) return
-    await onEnroll(selectedStudent.id)
-    setSelectedStudent(null)
+    try {
+      // Pass the selected student ID to the onEnroll callback
+      // The callback will construct { studentId } for the API call
+      await onEnroll(selectedStudent.id)
+      setSelectedStudent(null)
+    } catch (error) {
+      console.error("Enrollment error:", error)
+    }
   }
 
   const getInitials = (name: string) => {

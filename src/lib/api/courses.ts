@@ -153,8 +153,8 @@ export async function getCourseEnrollmentsApi(courseId: string) {
 
 export async function enrollStudentApi(courseId: string, data: EnrollmentFormData) {
   const response = await apiClient.post<{ enrollment: Enrollment }>(
-    `${COURSES_BASE}/enroll`,
-    { courseId, ...data }
+    `${COURSES_BASE}/enroll?courseId=${encodeURIComponent(courseId)}`,
+    data
   )
   return {
     success: !response.error,
@@ -191,14 +191,3 @@ export async function updateEnrollmentStatusApi(
 
 // ==================== Students API (for Education Manager) ====================
 
-export async function getStudentsApi(search?: string) {
-  const searchParams = search ? `?search=${encodeURIComponent(search)}` : ""
-  const response = await apiClient.get<{
-    students: Array<{ id: string; name: string; email: string }>
-  }>(`/api/users/students${searchParams}`)
-  return {
-    success: !response.error,
-    data: response.data?.students,
-    error: response.error?.message,
-  }
-}
