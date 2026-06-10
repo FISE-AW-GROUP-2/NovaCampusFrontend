@@ -2,24 +2,17 @@
 
 import { Sidebar } from "@/components/dashboard/sidebar"
 import { Header } from "@/components/dashboard/header"
-import { ScheduleContent } from "@/components/schedule/schedule-content"
+import { UserManagementContent } from "@/components/users/user-management-content"
 import { ProtectedRoute } from "@/components/auth/protected-route"
 import { useState } from "react"
 import { cn } from "@/lib/utils"
 import { UserRole } from "@/types/auth"
 
-export default function CalendarPage() {
+export default function UserManagementPage() {
   const [isCollapsed, setIsCollapsed] = useState(false)
 
   return (
-    <ProtectedRoute
-      allowedRoles={[
-        UserRole.CENTRAL_ADMIN,
-        UserRole.EDUCATION_MANAGER,
-        UserRole.TEACHER,
-        UserRole.STUDENT,
-      ]}
-    >
+    <ProtectedRoute allowedRoles={[UserRole.CENTRAL_ADMIN]}>
       <div className="flex min-h-screen bg-background">
         <div className="hidden lg:block">
           <Sidebar isCollapsed={isCollapsed} onToggle={() => setIsCollapsed(!isCollapsed)} />
@@ -32,12 +25,12 @@ export default function CalendarPage() {
           )}
         >
           <Header
-            title="Schedule"
-            description="View and manage the weekly class schedule across courses and rooms."
+            title="User Management"
+            description="Create, edit, and manage user accounts across all roles and campuses."
           />
 
           <div className="mt-6">
-            <ScheduleContent />
+            <UserManagementContent />
           </div>
         </main>
       </div>
