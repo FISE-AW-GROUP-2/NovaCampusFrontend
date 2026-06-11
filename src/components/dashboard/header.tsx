@@ -1,10 +1,13 @@
 "use client"
 
-import { Search, Mail, Bell } from "lucide-react"
+import { Search, Mail, Bell, QrCode } from "lucide-react"
+import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { MobileNav } from "./mobile-nav"
+import { useAuth } from "@/contexts/auth-context"
+import { UserRole } from "@/types/auth"
 import type { ReactNode } from "react"
 
 interface HeaderProps {
@@ -14,6 +17,9 @@ interface HeaderProps {
 }
 
 export function Header({ title, description, actions }: HeaderProps) {
+  const { user } = useAuth()
+  const isStudent = user?.role === UserRole.STUDENT
+
   return (
     <header className="space-y-3">
       <div className="flex items-center justify-between gap-3">
@@ -30,6 +36,20 @@ export function Header({ title, description, actions }: HeaderProps) {
         </div>
 
         <div className="flex items-center gap-2">
+          {isStudent && (
+            <Button
+              asChild
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9 rounded-lg"
+              title="Attendance check-in"
+            >
+              <Link href="/attendance">
+                <QrCode className="w-4 h-4" />
+                <span className="sr-only">Attendance check-in</span>
+              </Link>
+            </Button>
+          )}
           <Button
             variant="ghost"
             size="icon"

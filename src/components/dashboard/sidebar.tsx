@@ -21,6 +21,9 @@ import {
   DoorOpen,
   CalendarPlus,
   UserCog,
+  QrCode,
+  CalendarX2,
+  ClipboardCheck,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useState, createContext, useContext } from "react"
@@ -80,6 +83,22 @@ const getAdminItems = (role?: UserRole) => {
   return items
 }
 
+// Attendance / Absence items based on user role
+const getAttendanceItems = (role?: UserRole) => {
+  const items: Array<{ icon: typeof BookOpen; label: string; href: string; badge?: string }> = []
+
+  if (role === UserRole.STUDENT) {
+    items.push({ icon: QrCode, label: "Check-in", href: "/attendance" })
+    items.push({ icon: CalendarX2, label: "My Absences", href: "/absences" })
+  }
+
+  if (role === UserRole.TEACHER || role === UserRole.EDUCATION_MANAGER) {
+    items.push({ icon: ClipboardCheck, label: "Justifications", href: "/justifications" })
+  }
+
+  return items
+}
+
 // Room items based on user role
 const getRoomItems = (role?: UserRole) => {
   const items: Array<{ icon: typeof BookOpen; label: string; href: string; badge?: string }> = []
@@ -114,6 +133,7 @@ export function Sidebar({ isCollapsed = false, onToggle }: { isCollapsed?: boole
   const courseItems = getCourseItems(user?.role)
   const roomItems = getRoomItems(user?.role)
   const adminItems = getAdminItems(user?.role)
+  const attendanceItems = getAttendanceItems(user?.role)
 
   return (
     <aside
@@ -236,6 +256,47 @@ export function Sidebar({ isCollapsed = false, onToggle }: { isCollapsed?: boole
               )}
               <nav className="space-y-0.5">
                 {roomItems.map((item) => {
+                  const isActive = pathname === item.href || pathname?.startsWith(item.href + "/")
+                  return (
+                    <Link
+                      key={item.label}
+                      href={item.href}
+                      title={isCollapsed ? item.label : undefined}
+                      className={cn(
+                        "w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm font-normal transition-colors",
+                        isActive
+                          ? "bg-primary/10 text-primary font-medium"
+                          : "text-muted-foreground hover:bg-sidebar-accent hover:text-foreground",
+                        isCollapsed && "justify-center",
+                      )}
+                    >
+                      <item.icon className={cn("w-4 h-4", isCollapsed && "w-4.5 h-4.5")} />
+                      {!isCollapsed && (
+                        <>
+                          <span className="text-sm">{item.label}</span>
+                          {item.badge && (
+                            <span className="ml-auto bg-muted text-foreground text-[10px] font-medium px-1.5 py-0.5 rounded">
+                              {item.badge}
+                            </span>
+                          )}
+                        </>
+                      )}
+                    </Link>
+                  )
+                })}
+              </nav>
+            </div>
+          )}
+
+          {attendanceItems.length > 0 && (
+            <div>
+              {!isCollapsed && (
+                <p className="text-[10px] font-semibold text-muted-foreground mb-2 uppercase tracking-wide px-2">
+                  ATTENDANCE
+                </p>
+              )}
+              <nav className="space-y-0.5">
+                {attendanceItems.map((item) => {
                   const isActive = pathname === item.href || pathname?.startsWith(item.href + "/")
                   return (
                     <Link
