@@ -41,6 +41,7 @@ import {
 import type { Course } from "@/types/course"
 import type { Room } from "@/types/room"
 import { getUserDisplayName, type ManagedUser } from "@/types/user"
+import { firstSessionDate } from "@/lib/schedule-occurrences"
 import { AlertTriangle } from "lucide-react"
 
 interface ScheduleFormDialogProps {
@@ -54,6 +55,14 @@ function todayISO() {
   return new Date().toISOString().split("T")[0]
 }
 
+// A recurring session needs a span to recur across; default the end date a
+// term ahead (~16 weeks) so a new weekly session actually produces sessions.
+function defaultEndISO() {
+  const d = new Date()
+  d.setDate(d.getDate() + 16 * 7)
+  return d.toISOString().split("T")[0]
+}
+
 const DEFAULT_FORM: ScheduleFormData = {
   courseId: "",
   roomId: "",
@@ -62,7 +71,7 @@ const DEFAULT_FORM: ScheduleFormData = {
   endTime: "10:00",
   recurrence: Recurrence.WEEKLY,
   startDate: todayISO(),
-  endDate: todayISO(),
+  endDate: defaultEndISO(),
   isActive: true,
 }
 
@@ -136,6 +145,26 @@ export function ScheduleFormDialog({
       toast({
         title: "Invalid time range",
         description: "End time must be after start time.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (formData.endDate < formData.startDate) {
+      toast({
+        title: "Invalid date range",
+        description: "End date must be on or after the start date.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    // A schedule whose date range contains no day matching the chosen weekday
+    // would never appear on the calendar — block it and explain why.
+    if (!firstSessionDate(formData.dayOfWeek, formData.startDate, formData.endDate)) {
+      toast({
+        title: "No sessions in this range",
+        description: `The date range contains no ${DAY_LABELS[formData.dayOfWeek]}. Widen the range or change the day.`,
         variant: "destructive",
       })
       return

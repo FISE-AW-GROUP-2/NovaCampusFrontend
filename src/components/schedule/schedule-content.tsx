@@ -1,7 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback, useMemo } from "react"
-import { Card } from "@/components/ui/card"
+import { useState, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Spinner } from "@/components/ui/spinner"
@@ -15,75 +14,17 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { ScheduleFormDialog } from "./schedule-form-dialog"
 import { ScheduleConflictsDialog } from "./schedule-conflicts-dialog"
+import { ScheduleCalendar } from "./schedule-calendar"
 import { useToast } from "@/hooks/use-toast"
 import { getSchedulesApi, deleteScheduleApi, getConflictsApi } from "@/lib/api/schedules"
 import { getCoursesApi } from "@/lib/api/courses"
 import { getRoomsApi } from "@/lib/api/rooms"
 import { useAuth } from "@/contexts/auth-context"
 import { UserRole } from "@/types/auth"
-import {
-  DayOfWeek,
-  DAY_LABELS,
-  DAY_ORDER,
-  RECURRENCE_LABELS,
-  type Schedule,
-} from "@/types/schedule"
-import {
-  Plus,
-  CalendarDays,
-  Clock,
-  MapPin,
-  MoreVertical,
-  Pencil,
-  Trash2,
-  AlertTriangle,
-} from "lucide-react"
-
-// Color accents per day for quick visual scanning.
-const DAY_ACCENT: Record<DayOfWeek, string> = {
-  [DayOfWeek.MONDAY]: "border-l-blue-500",
-  [DayOfWeek.TUESDAY]: "border-l-green-500",
-  [DayOfWeek.WEDNESDAY]: "border-l-amber-500",
-  [DayOfWeek.THURSDAY]: "border-l-rose-500",
-  [DayOfWeek.FRIDAY]: "border-l-cyan-500",
-  [DayOfWeek.SATURDAY]: "border-l-orange-500",
-  [DayOfWeek.SUNDAY]: "border-l-purple-500",
-}
-
-function formatTime(t: string) {
-  // Accepts "HH:mm"; returns a 12-hour label.
-  const [hStr, m] = t.split(":")
-  const h = parseInt(hStr, 10)
-  if (Number.isNaN(h)) return t
-  const period = h >= 12 ? "PM" : "AM"
-  const hour12 = h % 12 === 0 ? 12 : h % 12
-  return `${hour12}:${m ?? "00"} ${period}`
-}
-
-// "Sep 2026" style month + year label for long-term planning.
-function formatMonthYear(value?: string) {
-  if (!value) return ""
-  const d = new Date(value)
-  if (Number.isNaN(d.getTime())) return ""
-  return d.toLocaleDateString(undefined, { month: "short", year: "numeric" })
-}
-
-// Date span across which a recurring session runs, e.g. "Sep 2026 – Jun 2027".
-function formatDateRange(startDate?: string, endDate?: string) {
-  const start = formatMonthYear(startDate)
-  const end = formatMonthYear(endDate)
-  if (!start && !end) return ""
-  if (start === end) return start
-  return `${start} – ${end}`
-}
+import { DAY_LABELS, type Schedule } from "@/types/schedule"
+import { Plus, CalendarDays, AlertTriangle } from "lucide-react"
 
 export function ScheduleContent() {
   const { user } = useAuth()
@@ -166,26 +107,6 @@ export function ScheduleContent() {
     fetchSchedules()
     fetchOpenConflictCount()
   }, [fetchSchedules, fetchOpenConflictCount])
-
-  // Group schedules by day and sort by start time within each day.
-  const byDay = useMemo(() => {
-    const map: Record<DayOfWeek, Schedule[]> = {
-      [DayOfWeek.MONDAY]: [],
-      [DayOfWeek.TUESDAY]: [],
-      [DayOfWeek.WEDNESDAY]: [],
-      [DayOfWeek.THURSDAY]: [],
-      [DayOfWeek.FRIDAY]: [],
-      [DayOfWeek.SATURDAY]: [],
-      [DayOfWeek.SUNDAY]: [],
-    }
-    for (const s of schedules) {
-      if (map[s.dayOfWeek]) map[s.dayOfWeek].push(s)
-    }
-    for (const day of DAY_ORDER) {
-      map[day].sort((a, b) => a.startTime.localeCompare(b.startTime))
-    }
-    return map
-  }, [schedules])
 
   const handleSuccess = () => {
     // Re-fetch so the new/updated session picks up resolved course/room names
@@ -270,96 +191,12 @@ export function ScheduleContent() {
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-          {DAY_ORDER.map((day) => (
-            <Card key={day} className="p-4 flex flex-col gap-3">
-              <div className="flex items-center justify-between">
-                <h3 className="font-semibold text-sm uppercase tracking-wide text-muted-foreground">
-                  {DAY_LABELS[day]}
-                </h3>
-                <Badge variant="secondary" className="text-xs">
-                  {byDay[day].length}
-                </Badge>
-              </div>
-
-              {byDay[day].length === 0 ? (
-                <p className="text-xs text-muted-foreground py-2">No sessions</p>
-              ) : (
-                <div className="flex flex-col gap-3">
-                  {byDay[day].map((s) => (
-                    <div
-                      key={s._id}
-                      className={`rounded-lg border border-l-4 ${DAY_ACCENT[day]} bg-card p-3`}
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0 flex-1">
-                          <p className="font-medium text-sm truncate">
-                            {s.course ? `${s.course.code} — ${s.course.name}` : "Course"}
-                          </p>
-                          <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
-                            <Clock className="h-3 w-3" />
-                            <span>
-                              {formatTime(s.startTime)} – {formatTime(s.endTime)}
-                            </span>
-                          </div>
-                          <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
-                            <MapPin className="h-3 w-3" />
-                            <span className="truncate">
-                              {s.room?.name ?? "Room"}
-                              {s.room?.building ? ` · ${s.room.building}` : ""}
-                            </span>
-                          </div>
-                          {formatDateRange(s.startDate, s.endDate) && (
-                            <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
-                              <CalendarDays className="h-3 w-3" />
-                              <span className="truncate">
-                                {formatDateRange(s.startDate, s.endDate)}
-                              </span>
-                            </div>
-                          )}
-                          <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                            <Badge variant="outline" className="text-[10px]">
-                              {RECURRENCE_LABELS[s.recurrence]}
-                            </Badge>
-                            {!s.isActive && (
-                              <Badge variant="secondary" className="text-[10px]">
-                                Inactive
-                              </Badge>
-                            )}
-                          </div>
-                        </div>
-
-                        {canManage && (
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0">
-                                <MoreVertical className="h-4 w-4" />
-                                <span className="sr-only">Session actions</span>
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => handleEdit(s)}>
-                                <Pencil className="mr-2 h-4 w-4" />
-                                Edit
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                className="text-destructive focus:text-destructive"
-                                onClick={() => setDeleteTarget(s)}
-                              >
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                Delete
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </Card>
-          ))}
-        </div>
+        <ScheduleCalendar
+          schedules={schedules}
+          canManage={canManage}
+          onEdit={handleEdit}
+          onDelete={(s) => setDeleteTarget(s)}
+        />
       )}
 
       {canManage && (
