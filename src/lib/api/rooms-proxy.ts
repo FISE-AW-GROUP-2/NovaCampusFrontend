@@ -1,13 +1,32 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
+import * as jose from "jose"
+
 
 // The Room service may be a separate microservice. Fall back to the shared
 // backend URL if a dedicated one is not configured.
 const BACKEND_URL =
   process.env.BACKEND_ROOMS_API_URL ||
-  process.env.BACKEND_COURSES_API_URL ||
   process.env.NEXT_PUBLIC_API_URL ||
   ""
+
+
+/**
+ * Derives the campusId from the authenticated user's JWT (access_token cookie)
+ * so requests can be scoped to their campus without trusting a client-supplied
+ * query param. Returns undefined when there is no token or no campusId claim.
+ */
+export function campusIdFromRequest(request: NextRequest): string | undefined {
+  const accessToken = request.cookies.get("access_token")?.value
+  if (!accessToken) return undefined
+  try {
+    const campusId = jose.decodeJwt(accessToken).campusId
+    return typeof campusId === "string" ? campusId : undefined
+  } catch {
+    return undefined
+  }
+}
+
 
 /**
  * Proxies a JSON request from the browser to the backend Room service.
@@ -18,7 +37,8 @@ const BACKEND_URL =
  */
 export async function proxyToRooms(
   request: NextRequest,
-  backendPath: string
+  backendPath: string,
+  extraQuery?: Record<string, string | undefined>
 ): Promise<NextResponse> {
   if (!BACKEND_URL) {
     return NextResponse.json(
@@ -32,9 +52,16 @@ export async function proxyToRooms(
     return NextResponse.json({ message: "Not authenticated" }, { status: 401 })
   }
 
-  // Preserve incoming query string when forwarding to the backend
-  const incomingQuery = request.nextUrl.search
-  const url = `${BACKEND_URL}${backendPath}${incomingQuery}`
+  // Preserve incoming query string and merge any server-injected params
+  // (e.g. campusId derived from the authenticated user) before forwarding.
+  const searchParams = new URLSearchParams(request.nextUrl.search)
+  if (extraQuery) {
+    for (const [key, value] of Object.entries(extraQuery)) {
+      if (value !== undefined && value !== "") searchParams.set(key, value)
+    }
+  }
+  const mergedQuery = searchParams.toString()
+  const url = `${BACKEND_URL}${backendPath}${mergedQuery ? `?${mergedQuery}` : ""}`
 
   const method = request.method
   const headers: Record<string, string> = {

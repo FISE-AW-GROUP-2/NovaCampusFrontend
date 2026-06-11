@@ -67,7 +67,11 @@ class ApiClient {
         const errorData = await response.json().catch(() => ({}))
         return {
           error: {
-            message: errorData.message || `Request failed with status ${response.status}`,
+            // Services are inconsistent: some return { message }, others { error }.
+            message:
+              errorData.message ||
+              errorData.error ||
+              `Request failed with status ${response.status}`,
             code: errorData.code,
             status: response.status,
           },

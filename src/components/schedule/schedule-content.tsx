@@ -22,8 +22,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { ScheduleFormDialog } from "./schedule-form-dialog"
+import { ScheduleConflictsDialog } from "./schedule-conflicts-dialog"
 import { useToast } from "@/hooks/use-toast"
-import { getSchedulesApi, deleteScheduleApi } from "@/lib/api/schedules"
+import { getSchedulesApi, deleteScheduleApi, getConflictsApi } from "@/lib/api/schedules"
+import { getCoursesApi } from "@/lib/api/courses"
+import { getRoomsApi } from "@/lib/api/rooms"
 import { useAuth } from "@/contexts/auth-context"
 import { UserRole } from "@/types/auth"
 import {
@@ -33,7 +36,16 @@ import {
   RECURRENCE_LABELS,
   type Schedule,
 } from "@/types/schedule"
-import { Plus, CalendarDays, Clock, MapPin, MoreVertical, Pencil, Trash2 } from "lucide-react"
+import {
+  Plus,
+  CalendarDays,
+  Clock,
+  MapPin,
+  MoreVertical,
+  Pencil,
+  Trash2,
+  AlertTriangle,
+} from "lucide-react"
 
 // Color accents per day for quick visual scanning.
 const DAY_ACCENT: Record<DayOfWeek, string> = {
@@ -43,6 +55,7 @@ const DAY_ACCENT: Record<DayOfWeek, string> = {
   [DayOfWeek.THURSDAY]: "border-l-rose-500",
   [DayOfWeek.FRIDAY]: "border-l-cyan-500",
   [DayOfWeek.SATURDAY]: "border-l-orange-500",
+  [DayOfWeek.SUNDAY]: "border-l-purple-500",
 }
 
 function formatTime(t: string) {
@@ -55,12 +68,30 @@ function formatTime(t: string) {
   return `${hour12}:${m ?? "00"} ${period}`
 }
 
+// "Sep 2026" style month + year label for long-term planning.
+function formatMonthYear(value?: string) {
+  if (!value) return ""
+  const d = new Date(value)
+  if (Number.isNaN(d.getTime())) return ""
+  return d.toLocaleDateString(undefined, { month: "short", year: "numeric" })
+}
+
+// Date span across which a recurring session runs, e.g. "Sep 2026 – Jun 2027".
+function formatDateRange(startDate?: string, endDate?: string) {
+  const start = formatMonthYear(startDate)
+  const end = formatMonthYear(endDate)
+  if (!start && !end) return ""
+  if (start === end) return start
+  return `${start} – ${end}`
+}
+
 export function ScheduleContent() {
   const { user } = useAuth()
   const { toast } = useToast()
 
-  const canManage =
-    user?.role === UserRole.TEACHER || user?.role === UserRole.CENTRAL_ADMIN
+  // The Education Manager owns scheduling: create/update/delete plus conflict
+  // resolution. Everyone else (Teacher, Student, Central Admin) is read-only.
+  const canManage = user?.role === UserRole.EDUCATION_MANAGER
 
   const [schedules, setSchedules] = useState<Schedule[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -69,15 +100,49 @@ export function ScheduleContent() {
   const [editing, setEditing] = useState<Schedule | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Schedule | null>(null)
 
+  const [showConflicts, setShowConflicts] = useState(false)
+  const [openConflictCount, setOpenConflictCount] = useState(0)
+
   const fetchSchedules = useCallback(async () => {
     setIsLoading(true)
     try {
-      // Teachers see only their own sessions; students/admins see all relevant.
-      const params =
-        user?.role === UserRole.TEACHER && user?.id ? { teacherId: user.id } : undefined
-      const result = await getSchedulesApi(params)
+      // The backend scopes visibility from the JWT (teachers see their own
+      // sessions, students see their enrolled courses, managers/admins see all),
+      // so no role filter is sent from the client.
+      //
+      // The Schedule service stores only ObjectId references, so we load courses
+      // and rooms alongside the schedules and resolve display names locally.
+      const [result, coursesRes, roomsRes] = await Promise.all([
+        getSchedulesApi(),
+        getCoursesApi(),
+        getRoomsApi(),
+      ])
+
       if (result.success && result.data) {
-        setSchedules(result.data.schedules)
+        const courseById = new Map(
+          (coursesRes.success && coursesRes.data ? coursesRes.data.courses : []).map((c) => [
+            c._id,
+            c,
+          ])
+        )
+        const roomById = new Map(
+          (roomsRes.success && roomsRes.data ? roomsRes.data.rooms : []).map((r) => [r._id, r])
+        )
+
+        const enriched: Schedule[] = result.data.schedules.map((s) => {
+          const course = courseById.get(s.courseId)
+          const room = roomById.get(s.roomId)
+          return {
+            ...s,
+            course: course
+              ? { _id: course._id, code: course.code, name: course.name }
+              : s.course,
+            room: room
+              ? { _id: room._id, name: room.name, building: room.building, floor: room.floor }
+              : s.room,
+          }
+        })
+        setSchedules(enriched)
       } else {
         toast({
           title: "Error",
@@ -88,11 +153,19 @@ export function ScheduleContent() {
     } finally {
       setIsLoading(false)
     }
-  }, [user?.role, user?.id, toast])
+  }, [toast])
+
+  // The Education Manager gets an at-a-glance count of unresolved conflicts.
+  const fetchOpenConflictCount = useCallback(async () => {
+    if (!canManage) return
+    const result = await getConflictsApi(false)
+    if (result.success && result.data) setOpenConflictCount(result.data.length)
+  }, [canManage])
 
   useEffect(() => {
     fetchSchedules()
-  }, [fetchSchedules])
+    fetchOpenConflictCount()
+  }, [fetchSchedules, fetchOpenConflictCount])
 
   // Group schedules by day and sort by start time within each day.
   const byDay = useMemo(() => {
@@ -103,6 +176,7 @@ export function ScheduleContent() {
       [DayOfWeek.THURSDAY]: [],
       [DayOfWeek.FRIDAY]: [],
       [DayOfWeek.SATURDAY]: [],
+      [DayOfWeek.SUNDAY]: [],
     }
     for (const s of schedules) {
       if (map[s.dayOfWeek]) map[s.dayOfWeek].push(s)
@@ -113,12 +187,11 @@ export function ScheduleContent() {
     return map
   }, [schedules])
 
-  const handleSuccess = (schedule: Schedule) => {
-    setSchedules((prev) => {
-      const exists = prev.find((s) => s._id === schedule._id)
-      return exists ? prev.map((s) => (s._id === schedule._id ? schedule : s)) : [schedule, ...prev]
-    })
+  const handleSuccess = () => {
+    // Re-fetch so the new/updated session picks up resolved course/room names
+    // (the create/update response contains only ObjectId references).
     setEditing(null)
+    fetchSchedules()
   }
 
   const handleEdit = (schedule: Schedule) => {
@@ -155,12 +228,25 @@ export function ScheduleContent() {
             ? "Manage your weekly recurring sessions across courses and rooms."
             : "View your weekly class schedule."}
         </p>
-        {canManage && (
-          <Button onClick={() => setShowForm(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            New Session
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          {canManage && (
+            <Button variant="outline" onClick={() => setShowConflicts(true)}>
+              <AlertTriangle className="mr-2 h-4 w-4" />
+              Conflicts
+              {openConflictCount > 0 && (
+                <Badge variant="destructive" className="ml-2">
+                  {openConflictCount}
+                </Badge>
+              )}
+            </Button>
+          )}
+          {canManage && (
+            <Button onClick={() => setShowForm(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              New Session
+            </Button>
+          )}
+        </div>
       </div>
 
       {isLoading ? (
@@ -223,6 +309,14 @@ export function ScheduleContent() {
                               {s.room?.building ? ` · ${s.room.building}` : ""}
                             </span>
                           </div>
+                          {formatDateRange(s.startDate, s.endDate) && (
+                            <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+                              <CalendarDays className="h-3 w-3" />
+                              <span className="truncate">
+                                {formatDateRange(s.startDate, s.endDate)}
+                              </span>
+                            </div>
+                          )}
                           <div className="mt-2 flex flex-wrap items-center gap-1.5">
                             <Badge variant="outline" className="text-[10px]">
                               {RECURRENCE_LABELS[s.recurrence]}
@@ -274,6 +368,19 @@ export function ScheduleContent() {
           onOpenChange={handleFormClose}
           schedule={editing}
           onSuccess={handleSuccess}
+        />
+      )}
+
+      {canManage && (
+        <ScheduleConflictsDialog
+          open={showConflicts}
+          onOpenChange={setShowConflicts}
+          schedules={schedules}
+          onResolved={() => {
+            // A resolved conflict moves a session, so refresh both views.
+            fetchSchedules()
+            fetchOpenConflictCount()
+          }}
         />
       )}
 

@@ -25,5 +25,5 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ message: "roomId is required in the request body" }, { status: 400 })
   }
 
-  return proxyToRooms(request, `/rooms/${encodeURIComponent(roomId)}/book`)
+  return proxyToRooms(request, `/rooms/book/${encodeURIComponent(roomId)}`)
 }

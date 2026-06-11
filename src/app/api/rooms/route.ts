@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
-import { proxyToRooms } from "@/lib/api/rooms-proxy"
+import { proxyToRooms, campusIdFromRequest } from "@/lib/api/rooms-proxy"
 
 // BACKEND URL already includes the "/api" segment, so backend paths here must
 // NOT repeat it (otherwise the URL becomes /api/api/rooms).
@@ -9,7 +9,7 @@ import { proxyToRooms } from "@/lib/api/rooms-proxy"
 // PUT    /api/rooms        -> backend PUT    {BACKEND}/rooms/{roomId}
 // DELETE /api/rooms        -> backend DELETE {BACKEND}/rooms/{roomId}
 export async function GET(request: NextRequest) {
-  return proxyToRooms(request, "/rooms")
+  return proxyToRooms(request, "/rooms", { campusId: campusIdFromRequest(request) })
 }
 
 export async function POST(request: NextRequest) {

@@ -5,6 +5,7 @@ import { proxyToSchedules } from "@/lib/api/schedules-proxy"
 // BACKEND URL already includes the "/api" segment, so backend paths here must
 // NOT repeat it (otherwise the URL becomes /api/api/schedules).
 // GET    /api/schedules        -> backend GET    {BACKEND}/schedules
+// GET    /api/schedules?id=X   -> backend GET    {BACKEND}/schedules/{id}
 // POST   /api/schedules        -> backend POST   {BACKEND}/schedules
 // PUT    /api/schedules        -> backend PUT    {BACKEND}/schedules/{scheduleId}
 // DELETE /api/schedules        -> backend DELETE {BACKEND}/schedules/{scheduleId}
@@ -12,6 +13,13 @@ import { proxyToSchedules } from "@/lib/api/schedules-proxy"
 // No dynamic route segments are used. The scheduleId is read from the query
 // string or JSON body and injected into the backend path here.
 export async function GET(request: NextRequest) {
+  // A single id selects the dedicated GET /schedules/{id} endpoint; otherwise
+  // this is a (role-scoped) list query and any filters are forwarded as-is.
+  const scheduleId =
+    request.nextUrl.searchParams.get("id") || request.nextUrl.searchParams.get("scheduleId")
+  if (scheduleId) {
+    return proxyToSchedules(request, `/schedules/${encodeURIComponent(scheduleId)}`)
+  }
   return proxyToSchedules(request, "/schedules")
 }
 

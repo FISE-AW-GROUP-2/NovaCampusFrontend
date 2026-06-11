@@ -26,7 +26,9 @@ import { useToast } from "@/hooks/use-toast"
 import { createScheduleApi, updateScheduleApi } from "@/lib/api/schedules"
 import { getCoursesApi } from "@/lib/api/courses"
 import { getRoomsApi } from "@/lib/api/rooms"
+import { getUsersApi } from "@/lib/api/users"
 import { useAuth } from "@/contexts/auth-context"
+import { UserRole } from "@/types/auth"
 import {
   DayOfWeek,
   DAY_LABELS,
@@ -38,6 +40,7 @@ import {
 } from "@/types/schedule"
 import type { Course } from "@/types/course"
 import type { Room } from "@/types/room"
+import { getUserDisplayName, type ManagedUser } from "@/types/user"
 import { AlertTriangle } from "lucide-react"
 
 interface ScheduleFormDialogProps {
@@ -72,6 +75,7 @@ export function ScheduleFormDialog({
   const [formData, setFormData] = useState<ScheduleFormData>(DEFAULT_FORM)
   const [courses, setCourses] = useState<Course[]>([])
   const [rooms, setRooms] = useState<Room[]>([])
+  const [teachers, setTeachers] = useState<ManagedUser[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [conflict, setConflict] = useState<string | null>(null)
   const { toast } = useToast()
@@ -79,18 +83,25 @@ export function ScheduleFormDialog({
 
   const isEditing = !!schedule
 
-  // Load courses and rooms for the select inputs when the dialog opens.
+  // Load courses, rooms and the teacher list for the select inputs when the
+  // dialog opens. The Education Manager assigns each session to a teacher.
   useEffect(() => {
     if (!open) return
     let active = true
     ;(async () => {
-      const [coursesRes, roomsRes] = await Promise.all([
+      const [coursesRes, roomsRes, usersRes] = await Promise.all([
         getCoursesApi({ isActive: true }),
         getRoomsApi({ isActive: true }),
+        getUsersApi({ role: UserRole.TEACHER }),
       ])
       if (!active) return
       if (coursesRes.success && coursesRes.data) setCourses(coursesRes.data.courses)
       if (roomsRes.success && roomsRes.data) setRooms(roomsRes.data.rooms)
+      // The auth service ignores the role query filter, so narrow to teachers
+      // on the client.
+      if (usersRes.success && usersRes.data) {
+        setTeachers(usersRes.data.users.filter((u) => u.role === UserRole.TEACHER))
+      }
     })()
     return () => {
       active = false
@@ -130,13 +141,23 @@ export function ScheduleFormDialog({
       return
     }
 
+    if (!formData.teacherId) {
+      toast({
+        title: "Teacher required",
+        description: "Select the teacher this session is assigned to.",
+        variant: "destructive",
+      })
+      return
+    }
+
     setIsLoading(true)
     try {
-      // teacherId and campusId are derived from the authenticated teacher.
+      // The session is assigned to the chosen teacher; the campus follows that
+      // teacher (falling back to the manager's campus if not set on the user).
+      const selectedTeacher = teachers.find((t) => t._id === formData.teacherId)
       const payload: ScheduleFormData = {
         ...formData,
-        teacherId: formData.teacherId || user?.id,
-        campusId: formData.campusId || user?.campusId,
+        campusId: formData.campusId || selectedTeacher?.campusId || user?.campusId,
       }
 
       const result = isEditing
@@ -240,6 +261,31 @@ export function ScheduleFormDialog({
                       <SelectItem key={room._id} value={room._id}>
                         {room.name}
                         {room.building ? ` · ${room.building}` : ""}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="teacherId">Teacher</Label>
+              <Select
+                value={formData.teacherId}
+                onValueChange={(value) => setFormData({ ...formData, teacherId: value })}
+              >
+                <SelectTrigger id="teacherId">
+                  <SelectValue placeholder="Assign a teacher" />
+                </SelectTrigger>
+                <SelectContent>
+                  {teachers.length === 0 ? (
+                    <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                      No teachers available
+                    </div>
+                  ) : (
+                    teachers.map((teacher) => (
+                      <SelectItem key={teacher._id} value={teacher._id}>
+                        {getUserDisplayName(teacher)}
                       </SelectItem>
                     ))
                   )}
@@ -361,7 +407,10 @@ export function ScheduleFormDialog({
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={isLoading || !formData.courseId || !formData.roomId}>
+            <Button
+              type="submit"
+              disabled={isLoading || !formData.courseId || !formData.roomId || !formData.teacherId}
+            >
               {isLoading && <Spinner className="mr-2 h-4 w-4" />}
               {isEditing ? "Update Session" : "Create Session"}
             </Button>

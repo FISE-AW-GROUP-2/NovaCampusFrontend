@@ -16,6 +16,9 @@ import type {
   SchedulesListResponse,
   ScheduleQueryParams,
   ScheduleConflictResponse,
+  ConflictLog,
+  ConflictResolution,
+  ScheduleSession,
 } from "@/types/schedule"
 
 const SCHEDULES_BASE = "/api/schedules"
@@ -32,10 +35,8 @@ export interface ScheduleApiResult<T = unknown> {
 export async function getSchedulesApi(params?: ScheduleQueryParams) {
   const searchParams = new URLSearchParams()
   if (params?.courseId) searchParams.set("courseId", params.courseId)
-  if (params?.roomId) searchParams.set("roomId", params.roomId)
-  if (params?.teacherId) searchParams.set("teacherId", params.teacherId)
   if (params?.dayOfWeek) searchParams.set("dayOfWeek", params.dayOfWeek)
-  if (params?.isActive !== undefined) searchParams.set("isActive", params.isActive.toString())
+  if (params?.campusId) searchParams.set("campusId", params.campusId)
 
   const query = searchParams.toString()
   const endpoint = query ? `${SCHEDULES_BASE}?${query}` : SCHEDULES_BASE
@@ -112,5 +113,54 @@ export async function deleteScheduleApi(scheduleId: string): Promise<ScheduleApi
   return {
     success: !response.error,
     error: response.error?.message,
+  }
+}
+
+// All roles: the concrete occurrence dates (ISO strings) generated from a
+// schedule's recurrence rule between its start and end dates.
+export async function getScheduleSessionsApi(scheduleId: string) {
+  const response = await apiClient.get<{ sessions: ScheduleSession[] }>(
+    `${SCHEDULES_BASE}/sessions?id=${encodeURIComponent(scheduleId)}`
+  )
+  return {
+    success: !response.error,
+    data: response.data?.sessions,
+    error: response.error?.message,
+  }
+}
+
+// Teacher only: list conflict logs for the teacher's own schedules.
+// Pass resolved to filter to resolved (true) or open (false) conflicts.
+export async function getConflictsApi(resolved?: boolean) {
+  const endpoint =
+    resolved === undefined
+      ? `${SCHEDULES_BASE}/conflicts`
+      : `${SCHEDULES_BASE}/conflicts?resolved=${resolved}`
+  const response = await apiClient.get<{ conflicts: ConflictLog[] }>(endpoint)
+  return {
+    success: !response.error,
+    data: response.data?.conflicts,
+    error: response.error?.message,
+  }
+}
+
+// Teacher only: resolve a schedule's open conflicts by moving it to a free
+// room/day/time. Re-runs conflict detection, so it may itself return 409.
+export async function resolveConflictApi(
+  scheduleId: string,
+  resolution: ConflictResolution
+): Promise<ScheduleApiResult<Schedule>> {
+  const response = await apiClient.patch<{ message: string; schedule: Schedule }>(
+    `${SCHEDULES_BASE}/resolve?id=${encodeURIComponent(scheduleId)}`,
+    resolution
+  )
+  if (response.error?.status === 409) {
+    return { success: false, error: response.error.message, status: 409 }
+  }
+  return {
+    success: !response.error,
+    data: response.data?.schedule,
+    error: response.error?.message,
+    status: response.error?.status,
   }
 }
