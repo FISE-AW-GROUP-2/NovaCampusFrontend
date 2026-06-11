@@ -113,14 +113,11 @@ export interface JustificationDecisionRequest {
   rejectionNote?: string
 }
 
-// Filters for listing absences (student view) or justifications (reviewer view).
+// Filters for listing absences (student view). The reviewer queue has no
+// filters: the backend only exposes the pending list.
 export interface AbsenceQueryParams {
   status?: AbsenceStatus | "all"
   courseId?: string
-}
-
-export interface JustificationQueryParams {
-  decision?: JustificationDecision | "all"
 }
 
 // ---- Display helpers ----------------------------------------------------

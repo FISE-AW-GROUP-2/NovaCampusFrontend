@@ -2,17 +2,16 @@ import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { proxyToAbsences } from "@/lib/api/absences-proxy"
 
-// Justification review queue + validation.
-// GET   /api/justifications              -> backend GET {BACKEND}/justifications
-//   Reviewer-scoped (Teacher / Education Manager). Optional ?decision filter
-//   (pending|approved|rejected) is forwarded as-is.
-// PATCH /api/justifications?id=X         -> backend PATCH {BACKEND}/justifications/{id}
+// Justification review queue + validation (Teacher / Education Manager).
+// GET   /api/justifications      -> backend GET {BACKEND}/absences/justifications/pending
+//   The backend only exposes the PENDING queue; there is no decision filter.
+// PATCH /api/justifications?id=X -> backend PATCH {BACKEND}/absences/justifications/{id}
 //   Body: { decision: "approved" | "rejected", rejectionNote? }.
 //
 // No dynamic route segments are used; the justification id is read from the
-// query string and injected into the backend path here.
+// query string (or body) and injected into the backend path here.
 export async function GET(request: NextRequest) {
-  return proxyToAbsences(request, "/justifications")
+  return proxyToAbsences(request, "/absences/justifications/pending")
 }
 
 export async function PATCH(request: NextRequest) {
@@ -39,5 +38,8 @@ export async function PATCH(request: NextRequest) {
     )
   }
 
-  return proxyToAbsences(request, `/justifications/${encodeURIComponent(justificationId)}`)
+  return proxyToAbsences(
+    request,
+    `/absences/justifications/${encodeURIComponent(justificationId)}`
+  )
 }

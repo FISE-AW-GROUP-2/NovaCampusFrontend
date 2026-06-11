@@ -52,8 +52,8 @@ const ROUTE_PERMISSIONS: RoutePermission[] = [
   // Reports - Admin and Education Manager
   { pattern: /^\/reports/, roles: ["Central Admin", "Education Manager"] },
 
-  // Calendar - Everyone except students
-  { pattern: /^\/calendar/, roles: ["Central Admin", "Education Manager", "Teacher"] },
+  // Calendar - All roles can view the schedule (students see their enrolled sessions)
+  { pattern: /^\/calendar/, roles: ["Central Admin", "Education Manager", "Teacher", "Student"] },
 
   // Notifications and help - All users
   { pattern: /^\/notifications/, roles: ["Central Admin", "Education Manager", "Teacher", "Student"] },

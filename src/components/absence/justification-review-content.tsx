@@ -7,7 +7,6 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Spinner } from "@/components/ui/spinner"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   Dialog,
   DialogContent,
@@ -17,11 +16,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { useToast } from "@/hooks/use-toast"
-import { getJustificationsApi, reviewJustificationApi } from "@/lib/api/absences"
+import { getPendingJustificationsApi, reviewJustificationApi } from "@/lib/api/absences"
 import {
   justificationDecisionConfig,
   type JustificationRequest,
-  type JustificationDecision,
 } from "@/types/absence"
 import {
   FileText,
@@ -31,19 +29,6 @@ import {
   Calendar,
   User,
 } from "lucide-react"
-
-const TAB_OPTIONS: Array<JustificationDecision | "all"> = [
-  "pending",
-  "approved",
-  "rejected",
-  "all",
-]
-const TAB_LABELS: Record<JustificationDecision | "all", string> = {
-  pending: "Pending",
-  approved: "Approved",
-  rejected: "Rejected",
-  all: "All",
-}
 
 function formatDate(iso?: string): string {
   if (!iso) return "—"
@@ -63,7 +48,6 @@ export function JustificationReviewContent() {
 
   const [requests, setRequests] = useState<JustificationRequest[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [tab, setTab] = useState<JustificationDecision | "all">("pending")
   const [actioningId, setActioningId] = useState<string | null>(null)
 
   // Reject dialog state
@@ -73,7 +57,7 @@ export function JustificationReviewContent() {
   const fetchRequests = useCallback(async () => {
     setIsLoading(true)
     try {
-      const result = await getJustificationsApi({ decision: tab })
+      const result = await getPendingJustificationsApi()
       if (result.success && result.data) {
         setRequests(result.data.justifications)
       } else {
@@ -86,19 +70,15 @@ export function JustificationReviewContent() {
     } finally {
       setIsLoading(false)
     }
-  }, [tab, toast])
+  }, [toast])
 
   useEffect(() => {
     fetchRequests()
   }, [fetchRequests])
 
-  const applyDecision = (id: string, decision: JustificationDecision, rejectionNote?: string) => {
-    setRequests((prev) =>
-      // When viewing a filtered tab, a decided item leaves the list; on "all" we update in place.
-      tab === "all" || tab === decision
-        ? prev.map((r) => (r._id === id ? { ...r, decision, rejectionNote } : r))
-        : prev.filter((r) => r._id !== id)
-    )
+  // The backend only serves the pending queue, so a decided item leaves the list.
+  const applyDecision = (id: string) => {
+    setRequests((prev) => prev.filter((r) => r._id !== id))
   }
 
   const handleApprove = async (request: JustificationRequest) => {
@@ -107,7 +87,7 @@ export function JustificationReviewContent() {
       const result = await reviewJustificationApi(request._id, { decision: "approved" })
       if (result.success) {
         toast({ title: "Justification approved", description: "The student has been notified." })
-        applyDecision(request._id, "approved")
+        applyDecision(request._id)
       } else {
         toast({
           title: "Error",
@@ -138,7 +118,7 @@ export function JustificationReviewContent() {
       })
       if (result.success) {
         toast({ title: "Justification rejected", description: "The student has been notified." })
-        applyDecision(rejectTarget._id, "rejected", rejectNote.trim())
+        applyDecision(rejectTarget._id)
         setRejectTarget(null)
         setRejectNote("")
       } else {
@@ -155,16 +135,6 @@ export function JustificationReviewContent() {
 
   return (
     <div className="space-y-6">
-      <Tabs value={tab} onValueChange={(v) => setTab(v as JustificationDecision | "all")}>
-        <TabsList>
-          {TAB_OPTIONS.map((opt) => (
-            <TabsTrigger key={opt} value={opt}>
-              {TAB_LABELS[opt]}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-      </Tabs>
-
       {isLoading ? (
         <div className="flex items-center justify-center py-16">
           <Spinner className="h-8 w-8" />
@@ -174,9 +144,7 @@ export function JustificationReviewContent() {
           <Inbox className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
           <h3 className="text-lg font-medium mb-2">Nothing to review</h3>
           <p className="text-muted-foreground">
-            {tab === "pending"
-              ? "There are no pending justifications right now."
-              : "No justifications match this filter."}
+            There are no pending justifications right now.
           </p>
         </div>
       ) : (

@@ -2,12 +2,17 @@
  * Absence Service API Client
  *
  * All calls go through same-origin Next.js proxy routes which forward the
- * HttpOnly JWT to the backend Absence microservice. No dynamic route segments
- * are used on the client; identifiers are passed via query string or body.
+ * HttpOnly JWT to the backend Absence microservice (mounted at /api/absences).
+ * No dynamic route segments are used on the client; identifiers are passed
+ * via query string or body.
  *
- * Roles:
- *  - Student: scan QR (check-in), view own absence records, submit justifications.
- *  - Teacher / Education Manager: review pending justifications and validate them.
+ * Backend endpoints:
+ *  - GET   /absences/qr/:scheduleId             (Student) QR of the session starting now
+ *  - POST  /absences/scan                       (Student) body { qrToken }
+ *  - GET   /absences/my?status=&courseId=       (Student) own absence records
+ *  - POST  /absences/:id/justify                (Student) multipart: document + reason
+ *  - GET   /absences/justifications/pending     (Teacher / Education Manager)
+ *  - PATCH /absences/justifications/:id         (Teacher / Education Manager) body { decision }
  */
 
 import { apiClient } from "./client"
@@ -16,12 +21,12 @@ import type {
   AbsencesListResponse,
   AbsenceQueryParams,
   ActiveQRResponse,
+  JustificationDecisionRequest,
   JustificationRequest,
   JustificationsListResponse,
-  JustificationQueryParams,
-  JustificationDecisionRequest,
   ScanQRRequest,
   ScanQRResponse,
+  SessionQRCode,
 } from "@/types/absence"
 
 const ATTENDANCE_BASE = "/api/attendance"
@@ -35,17 +40,51 @@ export interface AbsenceApiResult<T = unknown> {
   status?: number
 }
 
+// ---- Response normalization ----------------------------------------------
+// The backend may return either a bare array/object or a wrapped payload
+// ({ absences: [...] }, { qrCode: {...} }, ...). Normalize both shapes so the
+// UI always receives the wrapped form.
+
+function normalizeAbsences(data: unknown): AbsencesListResponse {
+  if (Array.isArray(data)) return { absences: data as Absence[] }
+  const obj = (data ?? {}) as Record<string, unknown>
+  if (Array.isArray(obj.absences)) {
+    return { absences: obj.absences as Absence[], total: obj.total as number | undefined }
+  }
+  return { absences: [] }
+}
+
+function normalizeJustifications(data: unknown): JustificationsListResponse {
+  if (Array.isArray(data)) return { justifications: data as JustificationRequest[] }
+  const obj = (data ?? {}) as Record<string, unknown>
+  if (Array.isArray(obj.justifications)) {
+    return {
+      justifications: obj.justifications as JustificationRequest[],
+      total: obj.total as number | undefined,
+    }
+  }
+  return { justifications: [] }
+}
+
+function normalizeQR(data: unknown): ActiveQRResponse {
+  const obj = (data ?? {}) as Record<string, unknown>
+  if (obj.qrCode) return { qrCode: obj.qrCode as SessionQRCode }
+  // Bare QR document (has the scannable token at the top level).
+  if (typeof obj.token === "string") return { qrCode: obj as unknown as SessionQRCode }
+  return { qrCode: null }
+}
+
 // ---- Student: QR check-in ----------------------------------------------
 
-// Fetch the currently active QR code for a schedule session (shown on the
-// student's screen during the first minutes of the session).
+// Fetch the QR code of the session currently starting (the backend only
+// returns it during the first ~10 minutes of the session).
 export async function getActiveQRApi(scheduleId: string): Promise<AbsenceApiResult<ActiveQRResponse>> {
-  const response = await apiClient.get<ActiveQRResponse>(
+  const response = await apiClient.get<unknown>(
     `${ATTENDANCE_BASE}/active-qr?scheduleId=${encodeURIComponent(scheduleId)}`
   )
   return {
     success: !response.error,
-    data: response.data,
+    data: response.error ? undefined : normalizeQR(response.data),
     error: response.error?.message,
     status: response.error?.status,
   }
@@ -72,10 +111,10 @@ export async function getAbsencesApi(params?: AbsenceQueryParams): Promise<Absen
   const query = searchParams.toString()
   const endpoint = query ? `${ABSENCES_BASE}?${query}` : ABSENCES_BASE
 
-  const response = await apiClient.get<AbsencesListResponse>(endpoint)
+  const response = await apiClient.get<unknown>(endpoint)
   return {
     success: !response.error,
-    data: response.data,
+    data: response.error ? undefined : normalizeAbsences(response.data),
     error: response.error?.message,
     status: response.error?.status,
   }
@@ -121,25 +160,20 @@ export async function submitJustificationApi(
 
 // ---- Teacher / Education Manager: review justifications ------------------
 
-export async function getJustificationsApi(
-  params?: JustificationQueryParams
-): Promise<AbsenceApiResult<JustificationsListResponse>> {
-  const searchParams = new URLSearchParams()
-  if (params?.decision && params.decision !== "all") searchParams.set("decision", params.decision)
-
-  const query = searchParams.toString()
-  const endpoint = query ? `${JUSTIFICATIONS_BASE}?${query}` : JUSTIFICATIONS_BASE
-
-  const response = await apiClient.get<JustificationsListResponse>(endpoint)
+// The backend only exposes the PENDING queue (GET /absences/justifications/pending).
+export async function getPendingJustificationsApi(): Promise<AbsenceApiResult<JustificationsListResponse>> {
+  const response = await apiClient.get<unknown>(JUSTIFICATIONS_BASE)
   return {
     success: !response.error,
-    data: response.data,
+    data: response.error ? undefined : normalizeJustifications(response.data),
     error: response.error?.message,
     status: response.error?.status,
   }
 }
 
 // Approve or reject a pending justification.
+// Body: { decision: "approved" | "rejected", rejectionNote? } — the backend
+// requires the `decision` field.
 export async function reviewJustificationApi(
   justificationId: string,
   decision: JustificationDecisionRequest
