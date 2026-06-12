@@ -20,6 +20,12 @@ export interface ServiceProxy {
    * Content-Disposition so the browser can download the file.
    */
   proxyBinary: (request: NextRequest, backendPath: string) => Promise<NextResponse>
+  /**
+   * Proxies a request whose response is a stream (e.g. token-by-token LLM
+   * output). Pipes the backend body through without buffering so chunks
+   * reach the browser as they are produced.
+   */
+  proxyStream: (request: NextRequest, backendPath: string) => Promise<NextResponse>
 }
 
 export function createServiceProxy(serviceName: string, backendUrl: string | undefined): ServiceProxy {
@@ -130,5 +136,53 @@ export function createServiceProxy(serviceName: string, backendUrl: string | und
     }
   }
 
-  return { proxyJson, proxyBinary }
+  const proxyStream = async (request: NextRequest, backendPath: string): Promise<NextResponse> => {
+    const prep = buildRequest(request)
+    if (prep.error) return prep.error
+
+    const url = `${BACKEND_URL}${backendPath}${request.nextUrl.search}`
+    const headers: Record<string, string> = {
+      Authorization: `Bearer ${prep.accessToken}`,
+    }
+
+    let body: string | undefined
+    if (request.method !== "GET" && request.method !== "DELETE") {
+      const text = await request.text()
+      if (text) {
+        body = text
+        headers["Content-Type"] = "application/json"
+      }
+    }
+
+    try {
+      const backendResponse = await fetch(url, { method: request.method, headers, body })
+
+      // Errors come back as JSON; forward them so the client can show a message.
+      if (!backendResponse.ok) {
+        const data = await backendResponse.json().catch(() => ({}))
+        return NextResponse.json(data, { status: backendResponse.status })
+      }
+
+      const responseHeaders = new Headers()
+      responseHeaders.set(
+        "Content-Type",
+        backendResponse.headers.get("content-type") || "text/event-stream"
+      )
+      responseHeaders.set("Cache-Control", "no-cache")
+
+      return new NextResponse(backendResponse.body, {
+        status: backendResponse.status,
+        headers: responseHeaders,
+      })
+    } catch (error) {
+      return NextResponse.json(
+        {
+          message: error instanceof Error ? error.message : "Failed to reach backend",
+        },
+        { status: 502 }
+      )
+    }
+  }
+
+  return { proxyJson, proxyBinary, proxyStream }
 }

@@ -1,28 +1,41 @@
+"use client"
+
 import { Sidebar } from "@/components/dashboard/sidebar"
 import { Header } from "@/components/dashboard/header"
-import { TeamContent } from "@/components/team/team-content"
-import { Button } from "@/components/ui/button"
+import { UserManagementContent } from "@/components/users/user-management-content"
+import { ProtectedRoute } from "@/components/auth/protected-route"
+import { useState } from "react"
+import { cn } from "@/lib/utils"
+import { UserRole } from "@/types/auth"
 
+// Central Admin account & profile management (backed by the auth service's
+// /users CRUD endpoints).
 export default function TeamPage() {
+  const [isCollapsed, setIsCollapsed] = useState(false)
+
   return (
-    <div className="flex min-h-screen bg-background">
-      <Sidebar />
-
-      <main className="flex-1 p-4 lg:p-6 lg:ml-64">
-        <Header
-          title="Team"
-          description="Manage your team members and their roles."
-          actions={
-            <Button className="w-full sm:w-auto h-9 text-sm bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-300 hover:shadow-lg hover:shadow-primary/30 hover:scale-105">
-              + Add Member
-            </Button>
-          }
-        />
-
-        <div className="mt-6">
-          <TeamContent />
+    <ProtectedRoute allowedRoles={[UserRole.CENTRAL_ADMIN]}>
+      <div className="flex min-h-screen bg-background">
+        <div className="hidden lg:block">
+          <Sidebar isCollapsed={isCollapsed} onToggle={() => setIsCollapsed(!isCollapsed)} />
         </div>
-      </main>
-    </div>
+
+        <main
+          className={cn(
+            "flex-1 p-4 md:p-5 lg:p-6 transition-all duration-300",
+            isCollapsed ? "lg:ml-16" : "lg:ml-60"
+          )}
+        >
+          <Header
+            title="Accounts & Profiles"
+            description="Create, edit and remove the accounts of every campus user."
+          />
+
+          <div className="mt-6">
+            <UserManagementContent />
+          </div>
+        </main>
+      </div>
+    </ProtectedRoute>
   )
 }

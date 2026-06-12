@@ -2,73 +2,118 @@
 
 import { Sidebar } from "@/components/dashboard/sidebar"
 import { Header } from "@/components/dashboard/header"
-import { StatsCards } from "@/components/dashboard/stats-cards"
-import { ProjectAnalytics } from "@/components/dashboard/project-analytics"
-import { Reminders } from "@/components/dashboard/reminders"
-import { ProjectList } from "@/components/dashboard/project-list"
-import { TeamCollaboration } from "@/components/dashboard/team-collaboration"
-import { ProjectProgress } from "@/components/dashboard/project-progress"
-import { MobileAppCard } from "@/components/dashboard/mobile-app-card"
-import { TimeTracker } from "@/components/dashboard/time-tracker"
-import { Button } from "@/components/ui/button"
+import { ReportsDashboardContent } from "@/components/reports/reports-dashboard-content"
+import { ProtectedRoute } from "@/components/auth/protected-route"
+import { Card } from "@/components/ui/card"
+import { useAuth } from "@/contexts/auth-context"
 import { useState } from "react"
+import Link from "next/link"
 import { cn } from "@/lib/utils"
+import { UserRole } from "@/types/auth"
+import {
+  BookOpen,
+  Calendar,
+  CalendarPlus,
+  CalendarX2,
+  ClipboardCheck,
+  CreditCard,
+  DoorOpen,
+  GraduationCap,
+  NotebookPen,
+  QrCode,
+  UserPlus,
+  type LucideIcon,
+} from "lucide-react"
 
-export default function DashboardPage() {
-  const [isCollapsed, setIsCollapsed] = useState(false)
+interface QuickLink {
+  icon: LucideIcon
+  label: string
+  description: string
+  href: string
+}
+
+// Quick-access shortcuts per role for the non-admin home page.
+const QUICK_LINKS: Partial<Record<UserRole, QuickLink[]>> = {
+  [UserRole.STUDENT]: [
+    { icon: GraduationCap, label: "My Grades", description: "View your grades and export your transcript", href: "/grades" },
+    { icon: CreditCard, label: "My Payments", description: "Review tuition payments and due dates", href: "/payments" },
+    { icon: BookOpen, label: "Browse Courses", description: "Explore the course catalog", href: "/courses/browse" },
+    { icon: QrCode, label: "Check-in", description: "Scan the session QR code to mark attendance", href: "/attendance" },
+    { icon: CalendarX2, label: "My Absences", description: "Review absences and submit justifications", href: "/absences" },
+    { icon: Calendar, label: "Schedule", description: "See your upcoming sessions", href: "/calendar" },
+  ],
+  [UserRole.TEACHER]: [
+    { icon: NotebookPen, label: "Manage Grades", description: "Add, edit and remove student grades", href: "/grades/manage" },
+    { icon: BookOpen, label: "Manage Courses", description: "Your courses and their resources", href: "/courses/teacher" },
+    { icon: ClipboardCheck, label: "Justifications", description: "Review pending absence justifications", href: "/justifications" },
+    { icon: CalendarPlus, label: "Book a Room", description: "Reserve a room for your sessions", href: "/rooms/book" },
+    { icon: Calendar, label: "Schedule", description: "See your teaching schedule", href: "/calendar" },
+  ],
+  [UserRole.EDUCATION_MANAGER]: [
+    { icon: CreditCard, label: "Payments", description: "Track student payments and send reminders", href: "/payments" },
+    { icon: UserPlus, label: "Enrollments", description: "Enroll students into courses", href: "/courses/enrollments" },
+    { icon: DoorOpen, label: "Manage Rooms", description: "Manage rooms and their bookings", href: "/rooms/manage" },
+    { icon: ClipboardCheck, label: "Justifications", description: "Review pending absence justifications", href: "/justifications" },
+    { icon: Calendar, label: "Schedule", description: "Manage the campus schedule", href: "/calendar" },
+  ],
+}
+
+function QuickAccessGrid({ role }: { role?: UserRole }) {
+  const links = (role && QUICK_LINKS[role]) || []
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <div className="hidden lg:block">
-        <Sidebar isCollapsed={isCollapsed} onToggle={() => setIsCollapsed(!isCollapsed)} />
-      </div>
-
-      <main
-        className={cn(
-          "flex-1 p-4 md:p-5 lg:p-6 transition-all duration-300",
-          isCollapsed ? "lg:ml-16" : "lg:ml-60",
-        )}
-      >
-        <Header
-          title="Campaign Dashboard"
-          description="Plan, execute, and optimize your marketing campaigns with data-driven insights."
-          actions={
-            <>
-              <Button className="w-full sm:w-auto h-9 px-4 text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg">
-                + New Campaign
-              </Button>
-              <Button
-                variant="outline"
-                className="w-full sm:w-auto h-9 px-4 text-sm font-medium rounded-lg bg-transparent"
-              >
-                Export Report
-              </Button>
-            </>
-          }
-        />
-
-        <div className="mt-4 md:mt-5 space-y-4">
-          <StatsCards />
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <div className="lg:col-span-2 space-y-4">
-              <ProjectAnalytics />
-              <TeamCollaboration />
-            </div>
-
-            <div className="space-y-4">
-              <Reminders />
-              <ProjectProgress />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <ProjectList />
-            <MobileAppCard />
-            <TimeTracker />
-          </div>
-        </div>
-      </main>
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {links.map((link) => (
+        <Link key={link.href} href={link.href}>
+          <Card className="p-5 h-full hover:border-primary/50 hover:shadow-md transition-all">
+            <link.icon className="h-6 w-6 text-primary mb-3" />
+            <p className="font-medium text-sm mb-1">{link.label}</p>
+            <p className="text-xs text-muted-foreground">{link.description}</p>
+          </Card>
+        </Link>
+      ))}
     </div>
+  )
+}
+
+// Central Admin lands on the multi-campus reporting dashboard; other roles
+// get quick access to their own service pages.
+export default function DashboardPage() {
+  const [isCollapsed, setIsCollapsed] = useState(false)
+  const { user } = useAuth()
+  const isAdmin = user?.role === UserRole.CENTRAL_ADMIN
+
+  return (
+    <ProtectedRoute>
+      <div className="flex min-h-screen bg-background">
+        <div className="hidden lg:block">
+          <Sidebar isCollapsed={isCollapsed} onToggle={() => setIsCollapsed(!isCollapsed)} />
+        </div>
+
+        <main
+          className={cn(
+            "flex-1 p-4 md:p-5 lg:p-6 transition-all duration-300",
+            isCollapsed ? "lg:ml-16" : "lg:ml-60",
+          )}
+        >
+          <Header
+            title={
+              isAdmin
+                ? "Multi-Campus Dashboard"
+                : `Welcome back${user?.name ? `, ${user.name.split(" ")[0]}` : ""}`
+            }
+            description={
+              isAdmin
+                ? "Compare campuses, analyse success rates and export strategic reports."
+                : "Quick access to your most used pages."
+            }
+          />
+
+          <div className="mt-6">
+            {isAdmin ? <ReportsDashboardContent /> : <QuickAccessGrid role={user?.role} />}
+          </div>
+        </main>
+      </div>
+    </ProtectedRoute>
   )
 }

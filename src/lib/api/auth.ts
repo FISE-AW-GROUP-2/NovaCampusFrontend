@@ -92,9 +92,22 @@ export async function getCurrentUserApi(): Promise<AuthApiResponse<User>> {
     }
 
     const data = await response.json()
+    // The backend may return the raw user document ({ _id, profile: {...} })
+    // instead of the normalized session shape ({ id, name }); normalize here
+    // so the UI (navbar, settings) can always rely on id/name/email/role.
+    const raw = (data.user ?? data) as Record<string, unknown>
+    const profile = raw.profile as { firstName?: string; lastName?: string } | undefined
+    const name =
+      (raw.name as string) ||
+      [profile?.firstName, profile?.lastName].filter(Boolean).join(" ").trim()
+    const user: User = {
+      ...(raw as unknown as User),
+      id: (raw.id as string) || (raw._id as string),
+      name: name || (raw.email as string) || "",
+    }
     return {
       success: true,
-      data: data.user,
+      data: user,
     }
   } catch {
     return { success: false }

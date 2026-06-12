@@ -2,19 +2,14 @@
 
 import {
   LayoutDashboard,
-  CheckSquare,
   Calendar,
   BarChart3,
-  Users,
   Settings,
   HelpCircle,
   LogOut,
   Bot,
-  Sparkles,
-  Wand2,
   ChevronLeft,
   ChevronRight,
-  FileText,
   BookOpen,
   GraduationCap,
   UserPlus,
@@ -46,13 +41,14 @@ const SidebarContext = createContext<{
 
 export const useSidebar = () => useContext(SidebarContext)
 
-const menuItems = [
+const menuItems: Array<{
+  icon: typeof LayoutDashboard
+  label: string
+  href: string
+  badge?: string
+}> = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/" },
-  { icon: CheckSquare, label: "Campaigns", badge: "12", href: "/tasks" },
   { icon: Calendar, label: "Schedule", href: "/calendar" },
-  { icon: BarChart3, label: "Analytics", href: "/analytics" },
-  { icon: Users, label: "Team", href: "/team" },
-  { icon: FileText, label: "Templates", href: "/templates/new" },
 ]
 
 // Course items based on user role
@@ -79,7 +75,7 @@ const getAdminItems = (role?: UserRole) => {
   const items: Array<{ icon: typeof BookOpen; label: string; href: string; badge?: string }> = []
 
   if (role === UserRole.CENTRAL_ADMIN) {
-    items.push({ icon: UserCog, label: "User Management", href: "/admin/users" })
+    items.push({ icon: UserCog, label: "Accounts & Profiles", href: "/team" })
     items.push({ icon: BarChart3, label: "Reports", href: "/reports" })
   }
 
@@ -139,8 +135,6 @@ const getRoomItems = (role?: UserRole) => {
 
 const aiItems = [
   { icon: Bot, label: "AI Assistant", badge: "New", href: "/ai-assistant" },
-  { icon: Sparkles, label: "Content Generator", href: "/content-generator" },
-  { icon: Wand2, label: "Smart Suggestions", href: "/suggestions" },
 ]
 
 const generalItems = [
@@ -171,7 +165,7 @@ export function Sidebar({ isCollapsed = false, onToggle }: { isCollapsed?: boole
           {!isCollapsed && (
             <Link href="/">
               <div>
-                <span className="text-base font-bold text-sidebar-foreground">CampaignHub</span>
+                <span className="text-base font-bold text-sidebar-foreground">NovaCampus</span>
               </div>
             </Link>
           )}

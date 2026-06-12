@@ -28,6 +28,9 @@ const ROUTE_PERMISSIONS: RoutePermission[] = [
   // Admin routes - Central Admin only
   { pattern: /^\/admin/, roles: ["Central Admin"] },
 
+  // Account & profile management (team page) - Central Admin only
+  { pattern: /^\/team/, roles: ["Central Admin"] },
+
   // Academic management - Admin and Education Manager
   { pattern: /^\/academic/, roles: ["Central Admin", "Education Manager"] },
 

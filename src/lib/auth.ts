@@ -12,18 +12,10 @@ export function hasRole(user: User | null, allowedRoles: UserRole[]): boolean {
  * Get the default redirect path based on user role
  */
 export function getDefaultRedirectPath(role: UserRole): string {
-  switch (role) {
-    case UserRole.CENTRAL_ADMIN:
-      return "/admin/users"
-    case UserRole.EDUCATION_MANAGER:
-      return "/academic/curriculum"
-    case UserRole.TEACHER:
-      return "/classes"
-    case UserRole.STUDENT:
-      return "/portal/courses"
-    default:
-      return "/"
-  }
+  // Every role lands on "/" — the home page renders the reporting dashboard
+  // for the Central Admin and role-specific quick access for everyone else.
+  void role
+  return "/"
 }
 
 /**

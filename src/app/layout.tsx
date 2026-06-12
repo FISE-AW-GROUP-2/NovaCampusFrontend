@@ -41,7 +41,13 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable}`} suppressHydrationWarning>
       <body className="font-sans antialiased">
-        <ThemeProvider defaultTheme="light" storageKey="school-erp-theme" enableSystem={false}>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="light"
+          storageKey="school-erp-theme"
+          enableSystem={false}
+          disableTransitionOnChange
+        >
           <Suspense>
             <AuthProvider>
               {children}

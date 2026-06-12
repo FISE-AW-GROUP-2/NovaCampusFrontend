@@ -17,6 +17,13 @@ interface HeaderProps {
   actions?: ReactNode
 }
 
+function initials(name?: string, email?: string): string {
+  const source = name?.trim() || email || ""
+  const parts = source.split(/[\s@.]+/).filter(Boolean)
+  const result = (parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "")
+  return result.toUpperCase() || "?"
+}
+
 export function Header({ title, description, actions }: HeaderProps) {
   const { user } = useAuth()
   const isStudent = user?.role === UserRole.STUDENT
@@ -62,14 +69,14 @@ export function Header({ title, description, actions }: HeaderProps) {
 
           <div className="flex items-center gap-2 pl-2 ml-1 border-l border-border">
             <Avatar className="w-8 h-8">
-              <AvatarImage src="/profile.jpg" alt="Marketing Manager" />
+              {user?.avatar && <AvatarImage src={user.avatar} alt={user?.name || "Profile"} />}
               <AvatarFallback className="text-xs bg-primary text-primary-foreground font-medium">
-                MM
+                {initials(user?.name, user?.email)}
               </AvatarFallback>
             </Avatar>
             <div className="text-xs hidden lg:block">
-              <p className="font-medium text-foreground">Marketing Manager</p>
-              <p className="text-muted-foreground text-[10px]">manager@campaign.hub</p>
+              <p className="font-medium text-foreground">{user?.name || user?.email || ""}</p>
+              <p className="text-muted-foreground text-[10px]">{user?.role || ""}</p>
             </div>
           </div>
         </div>
