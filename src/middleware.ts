@@ -49,8 +49,15 @@ const ROUTE_PERMISSIONS: RoutePermission[] = [
   // Settings - All authenticated users can access their own settings
   { pattern: /^\/settings/, roles: ["Central Admin", "Education Manager", "Teacher", "Student"] },
 
-  // Reports - Admin and Education Manager
-  { pattern: /^\/reports/, roles: ["Central Admin", "Education Manager"] },
+  // Grade Service routes - Teachers manage, Students view their own
+  { pattern: /^\/grades\/manage/, roles: ["Teacher"] },
+  { pattern: /^\/grades/, roles: ["Teacher", "Student"] },
+
+  // Payment Service routes - Education Manager manages, Students read-only
+  { pattern: /^\/payments/, roles: ["Education Manager", "Student"] },
+
+  // Reporting Service - Central Admin only (matches the backend authorize rule)
+  { pattern: /^\/reports/, roles: ["Central Admin"] },
 
   // Calendar - All roles can view the schedule (students see their enrolled sessions)
   { pattern: /^\/calendar/, roles: ["Central Admin", "Education Manager", "Teacher", "Student"] },

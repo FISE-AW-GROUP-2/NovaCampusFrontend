@@ -1,11 +1,12 @@
 "use client"
 
-import { Search, Mail, Bell, QrCode } from "lucide-react"
+import { Search, Mail, QrCode } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { MobileNav } from "./mobile-nav"
+import { NotificationBell } from "@/components/notifications/notification-bell"
 import { useAuth } from "@/contexts/auth-context"
 import { UserRole } from "@/types/auth"
 import type { ReactNode } from "react"
@@ -57,14 +58,7 @@ export function Header({ title, description, actions }: HeaderProps) {
           >
             <Mail className="w-4 h-4" />
           </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="relative h-9 w-9 rounded-lg"
-          >
-            <Bell className="w-4 h-4" />
-            <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-destructive rounded-full" />
-          </Button>
+          <NotificationBell />
 
           <div className="flex items-center gap-2 pl-2 ml-1 border-l border-border">
             <Avatar className="w-8 h-8">
